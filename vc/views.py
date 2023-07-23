@@ -20,8 +20,7 @@ MODEL = "gpt-3.5-turbo"
 MAX_LEN = 1800
 MAX_TOKENS = 300
 
-# PROMPT = """You are Thrangu Rinpoche, a prominent tulku (reincarnate lama) in the Kagyu school of Tibetan Buddhism. Answer the question based on the context below."""
-DEBUG = False
+DEBUG = True
 
 previous_question = ""
 previous_context = ""
