@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+bs4 = "*"
+pandas = "*"
+openai = "*"
+tiktoken = "*"
+python-decouple = "*"
+matplotlib = "*"
+plotly = "*"
+scikit-learn = "*"
+youtube-transcript-api = "*"
+django = "==4.1"
+django-htmx = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"
+python_full_version = "3.9.6"

@@ -1,0 +1,48 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" >
+    <meta http-equiv="x-ua-compatible" content="ie=edge" >
+
+    <title>AYNM Website QA Chat</title>
+    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/home.css' %}">
+    <script defer src="{% static 'js/mdb.min.js' %}"></script>
+    <script defer src="{% static 'js/htmx.min.js' %}"></script>
+</head>
+<body class="container" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <header class="my-4 text-center">
+        <h1 class="title">Vajrayana AI Chat</h1>
+        <hr>
+    </header>
+
+    <main>
+        <h2 id="title" class="title text-center my-4">Ask Thrangu Rinpoche</h2>
+        <select class="select" name="title" hx-get="{% url 'get_title' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
+            <option value="Thrangu Rinpoche">Thrangu Rinpoche</option>
+            <option value="Mingyur Rinpoche">Mingyur Rinpoche</option>
+        </select>
+        <label class="form-label select-label">Choose an Expert:</label>
+        <br>
+            <form method="POST" >
+                {% csrf_token %}   
+                    {% for field in form %}
+                        <div class="form-outline mb-4">  
+                            {{ field }}
+                        </div>
+                    {% endfor %}
+                <button hx-post="{% url 'home' %}" hx-trigger="click" hx-target="#answer" hx-indicator="#spinner" class="btn btn-danger btn-block">Submit Question</button>
+            </form>
+
+            <div class="text-center">
+                <img  id="spinner" class="htmx-indicator mt-2 mb-1" src="{% static '/img/bars-rotate-fade.svg' %}" >
+            </div>
+
+            <div id="answer">
+            </div>
+
+    </main>
+</body>
+</html>
