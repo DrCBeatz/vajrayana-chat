@@ -26,21 +26,11 @@ previous_question = ""
 previous_context = ""
 previous_answer = ""
 
-# load embeddings from csv into dataframes and convert to numpy arrays
+# load embeddings from parquet into dataframes
 
-thrangu_rinpoche_df = pd.read_csv(
-    "processed/thrangu_rinpoche_embeddings.csv", index_col=0
-)
-thrangu_rinpoche_df["embeddings"] = (
-    thrangu_rinpoche_df["embeddings"].apply(eval).apply(np.array)
-)
+thrangu_rinpoche_df = pd.read_parquet("processed/thrangu_rinpoche_embeddings.parquet")
 
-mingyur_rinpoche_df = pd.read_csv(
-    "processed/mingyur_rinpoche_embeddings.csv", index_col=0
-)
-mingyur_rinpoche_df["embeddings"] = (
-    mingyur_rinpoche_df["embeddings"].apply(eval).apply(np.array)
-)
+mingyur_rinpoche_df = pd.read_parquet("processed/mingyur_rinpoche_embeddings.parquet")
 
 
 def create_context(question, df, max_len=MAX_LEN, size="ada"):

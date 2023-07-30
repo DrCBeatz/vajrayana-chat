@@ -15,6 +15,8 @@ scikit-learn = "*"
 youtube-transcript-api = "*"
 django = "==4.1"
 django-htmx = "*"
+pypdf2 = "*"
+pyarrow = "*"
 
 [dev-packages]
 

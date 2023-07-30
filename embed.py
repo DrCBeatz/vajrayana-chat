@@ -180,5 +180,5 @@ for index, row in df.iterrows():
 
 df["embeddings"] = embedding_list
 
-df.to_csv("processed/embeddings.csv")
+df.to_parquet("processed/embeddings.parquet", engine="pyarrow")
 print(df.head())
