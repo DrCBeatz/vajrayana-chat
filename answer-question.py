@@ -32,8 +32,9 @@ previous_context = ""
 previous_answer = ""
 
 # load embeddings from csv into dataframe and convert to numpy arrays
-df = pd.read_csv("processed/embeddings.csv", index_col=0)
-df["embeddings"] = df["embeddings"].apply(eval).apply(np.array)
+df = pd.read_parquet("processed/thrangu_rinpoche_embeddings.parquet", engine="pyarrow")
+# df = pd.read_csv("processed/embeddings.csv", index_col=0)
+# df["embeddings"] = df["embeddings"].apply(eval).apply(np.array)
 
 
 def create_context(question, df, max_len=MAX_LEN, size="ada"):
@@ -122,7 +123,8 @@ def answer_question(
         return ""
 
 
-question = "How should I learn to meditate?"
+while True:
+    question = input("Ask a question: ")
 
-answer = answer_question(df, question=question, debug=False)
-print(answer)
+    answer = answer_question(df, question=question, debug=True)
+    print(answer)

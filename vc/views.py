@@ -5,32 +5,34 @@ import pandas as pd
 import openai
 import numpy as np
 from openai.embeddings_utils import distances_from_embeddings
+from .models import Model, Expert, Conversation, Message, Document
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
 
-expert = "Thrangu Rinpoche"
-role = {
-    "Thrangu Rinpoche": "prominent tulku (reincarnate lama) in the Kagyu school of Tibetan Buddhism.",
-    "Mingyur Rinpoche": "Tibetan teacher and master of the Karma Kagyu and Nyingma lineages of Tibetan Buddhism.",
-}
-
-domain = "www.thrangu_rinpoche.com"
-full_url = f"https://{domain}/"
 openai.api_key = config("OPENAI_API_KEY")
 
-MODEL = "gpt-3.5-turbo"
+expert = Expert.objects.first()
+
+MODEL = Model.objects.first().name
 MAX_LEN = 1800
 MAX_TOKENS = 300
 
 DEBUG = True
 
+curent_context = ""
 previous_question = ""
 previous_context = ""
 previous_answer = ""
 
 # load embeddings from parquet into dataframes
 
-thrangu_rinpoche_df = pd.read_parquet("processed/thrangu_rinpoche_embeddings.parquet")
+thrangu_rinpoche_df = pd.read_parquet(
+    Document.objects.get(title="Thrangu Rinpoche Document").embeddings
+)
 
-mingyur_rinpoche_df = pd.read_parquet("processed/mingyur_rinpoche_embeddings.parquet")
+mingyur_rinpoche_df = pd.read_parquet(
+    Document.objects.get(title="Mingyur Rinpoche Document").embeddings
+)
 
 
 def create_context(question, df, max_len=MAX_LEN, size="ada"):
@@ -76,6 +78,8 @@ def answer_question(
         max_len=max_len,
         size=size,
     )
+    global current_context
+    current_context = context
     global previous_question
     global previous_context
     global previous_answer
@@ -101,7 +105,7 @@ def answer_question(
             messages=[
                 {
                     "role": "system",
-                    "content": f"You are the {expert}, {role[expert]} who answers questions about your life and Tibetan Buddhism.",
+                    "content": f"You are the {expert}, {expert.role} who answers questions about your life and Tibetan Buddhism.",
                 },
                 {"role": "user", "content": prompt},
             ],
@@ -119,6 +123,7 @@ def answer_question(
         return ""
 
 
+@login_required
 def home(request):
     if request.htmx and request.method == "POST":
         form = QuestionForm(request.POST)
@@ -128,6 +133,26 @@ def home(request):
                 df = thrangu_rinpoche_df
             else:
                 df = mingyur_rinpoche_df
+            answer = answer_question(df, question=question, debug=DEBUG)
+            if "conversation_id" not in request.session:
+                user = request.user
+                conversation = Conversation.objects.create(
+                    title=question, expert=expert, user=user
+                )
+                request.session["conversation_id"] = conversation.id
+            else:
+                # This is an existing session, get the current conversation
+                conversation_id = request.session["conversation_id"]
+                conversation = get_object_or_404(Conversation, id=conversation_id)
+
+            message = Message.objects.create(
+                conversation=conversation,
+                question=question,
+                answer=answer,
+                context=current_context,
+            )
+
+            message.save()
             answer = answer_question(df, question=question, debug=DEBUG)
             return render(
                 request, "answer.html", {"answer": answer, "question": question}
@@ -144,6 +169,6 @@ def get_title(request):
     global previous_answer
     previous_question = previous_context = previous_answer = ""
     title = request.GET.get("title", "Thrangu Rinpoche")
-    expert = title
+    expert = Expert.objects.get(name=title)
     print(expert)
     return render(request, "_title.html", {"title": title})

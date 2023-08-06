@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" >
+    <meta http-equiv="x-ua-compatible" content="ie=edge" >
+
+    <title>Log In</title>
+    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vc-home.css' %}">
+    <script defer src="{% static 'js/mdb.min.js' %}"></script>
+</head>
+<body class="container" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <header class="my-4 text-center">
+        <h1 class="title">Vajrayana Chat Log In</h1>
+        <hr>
+    </header>
+
+    <main>
+        <br>
+            <form method="POST" >
+                {% csrf_token %} 
+                    {{ form.as_p }}
+                <button type="submit" class="btn btn-danger btn-block">Log In</button>
+            </form>
+
+    </main>
+</body>
+</html>
