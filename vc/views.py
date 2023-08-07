@@ -3,7 +3,6 @@ from .forms import QuestionForm
 from decouple import config
 import pandas as pd
 import openai
-import numpy as np
 from openai.embeddings_utils import distances_from_embeddings
 from .models import Model, Expert, Conversation, Message, Document
 from django.shortcuts import get_object_or_404
@@ -26,13 +25,25 @@ previous_answer = ""
 
 # load embeddings from parquet into dataframes
 
-thrangu_rinpoche_df = pd.read_parquet(
-    Document.objects.get(title="Thrangu Rinpoche Document").embeddings
-)
+experts = Expert.objects.all()
+documents = Document.objects.all()
+embeddings = {}
 
-mingyur_rinpoche_df = pd.read_parquet(
-    Document.objects.get(title="Mingyur Rinpoche Document").embeddings
-)
+print(experts)
+for e in experts:
+    df_temp = pd.DataFrame()
+    embeddings[e.name] = pd.DataFrame()
+
+    for document in documents:
+        if e.name == document.expert.name:
+            df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
+            embeddings[e.name] = pd.concat(
+                [
+                    df_temp,
+                    embeddings[e.name],
+                ],
+                ignore_index=True,
+            )
 
 
 def create_context(question, df, max_len=MAX_LEN, size="ada"):
@@ -125,14 +136,12 @@ def answer_question(
 
 @login_required
 def home(request):
+    experts = Expert.objects.all()
     if request.htmx and request.method == "POST":
         form = QuestionForm(request.POST)
         if form.is_valid():
             question = form.cleaned_data.get("question")
-            if expert == "Thrangu Rinpoche":
-                df = thrangu_rinpoche_df
-            else:
-                df = mingyur_rinpoche_df
+            df = embeddings[expert.name]
             answer = answer_question(df, question=question, debug=DEBUG)
             if "conversation_id" not in request.session:
                 user = request.user
@@ -159,7 +168,7 @@ def home(request):
             )
     else:
         form = QuestionForm()
-    return render(request, "home.html", {"form": form})
+    return render(request, "home.html", {"form": form, "experts": experts})
 
 
 def get_title(request):

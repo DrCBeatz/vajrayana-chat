@@ -21,8 +21,9 @@
     <main>
         <h2 id="title" class="title text-center my-4">Ask Thrangu Rinpoche</h2>
         <select class="select" name="title" hx-get="{% url 'get_title' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
-            <option value="Thrangu Rinpoche">Thrangu Rinpoche</option>
-            <option value="Mingyur Rinpoche">Mingyur Rinpoche</option>
+            {% for expert in experts %}
+                <option value="{{ expert }}">{{ expert }}</option>
+            {% endfor %}
         </select>
         <label class="form-label select-label">Choose an Expert:</label>
         <br>

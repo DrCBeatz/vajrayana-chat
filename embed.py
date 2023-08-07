@@ -18,6 +18,8 @@ import openai
 
 # Define root domain to crawl
 domain = "www.thrangu-rinpoche.com"
+
+
 full_url = f"https://{domain}/"
 
 openai.api_key = config("OPENAI_API_KEY")
