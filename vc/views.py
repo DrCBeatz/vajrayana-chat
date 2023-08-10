@@ -7,10 +7,12 @@ from openai.embeddings_utils import distances_from_embeddings
 from .models import Model, Expert, Conversation, Message, Document
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
+from .timer_decorator import timer
 
 openai.api_key = config("OPENAI_API_KEY")
 
 expert = Expert.objects.first()
+
 
 MODEL = Model.objects.first().name
 MAX_LEN = 1800
@@ -23,27 +25,31 @@ previous_question = ""
 previous_context = ""
 previous_answer = ""
 
-# load embeddings from parquet into dataframes
 
-experts = Expert.objects.all()
-documents = Document.objects.all()
-embeddings = {}
+@timer
+def get_embeddings(experts=Expert.objects.all()):
+    print("Getting embeddings..")
+    embeddings = {}
+    documents = Document.objects.all()
 
-print(experts)
-for e in experts:
-    df_temp = pd.DataFrame()
-    embeddings[e.name] = pd.DataFrame()
+    for e in experts:
+        df_temp = pd.DataFrame()
+        embeddings[e.name] = pd.DataFrame()
 
-    for document in documents:
-        if e.name == document.expert.name:
-            df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
-            embeddings[e.name] = pd.concat(
-                [
-                    df_temp,
-                    embeddings[e.name],
-                ],
-                ignore_index=True,
-            )
+        for document in documents:
+            if e.name == document.expert.name:
+                try:
+                    df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
+                    embeddings[e.name] = pd.concat(
+                        [
+                            df_temp,
+                            embeddings[e.name],
+                        ],
+                        ignore_index=True,
+                    )
+                except:
+                    print("No embeddings for " + document.title)
+    return embeddings
 
 
 def create_context(question, df, max_len=MAX_LEN, size="ada"):
@@ -137,6 +143,8 @@ def answer_question(
 @login_required
 def home(request):
     experts = Expert.objects.all()
+    embeddings = get_embeddings(experts)
+
     if request.htmx and request.method == "POST":
         form = QuestionForm(request.POST)
         if form.is_valid():

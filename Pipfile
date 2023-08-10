@@ -17,6 +17,7 @@ django = "==4.1"
 django-htmx = "*"
 pypdf2 = "*"
 pyarrow = "*"
+django-cleanup = "*"
 
 [dev-packages]
 
