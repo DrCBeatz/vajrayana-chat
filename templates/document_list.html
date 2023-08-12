@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+<ul>
+    {% for document in documents %}
+    <ul class="list-group list-group-light">
+        <li class="list-group-item">   
+            <h3><a class="text-danger" href="{% url 'document-detail' document.pk %}">{{ document.title }}</a></h3>
+            <a class="text-dark" href="{% url 'document-update' document.pk %}">Edit</a>
+            <a class="text-dark" href="{% url 'document-delete' document.pk %}">Delete</a>
+        </li>
+    </ul>
+{% endfor %}
+</ul>
+<a class="btn btn-block btn-danger" href={% url 'document-create' %}>Add New Document</a>
+
+{% endblock %}

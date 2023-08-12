@@ -1,0 +1,53 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Vajrayana Chat{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/vc_home.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script defer src="{% static 'js/mdb.min.js' %}"></script>
+    <script defer src="{% static 'js/htmx.min.js' %}"></script>
+</head>
+<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    
+    <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'home' %}">Vajrayana AI Chat</a>
+            <button  class="navbar-toggler collapsed" type="button" data-mdb-toggle="collapse" data-mdb-target="#navbarColor02" aria-controls="navbarColor02" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="navbar-collapse collapse">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'expert-list' %}">Experts</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'document-list' %}">Documents</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+    
+    <header class="my-4 text-center">
+        <h1 class="title">{{ title }}</h1>
+            <hr>
+        </header>
+        
+        
+        
+        <main>
+            {% block content %}
+            
+            {% endblock %}
+        </main>
+        
+    </div>
+    </body>
+    </html>
+    

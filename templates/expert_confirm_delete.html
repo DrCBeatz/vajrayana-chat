@@ -1,0 +1,13 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+<p><strong>Are you sure you want to delete the expert "{{ expert.name }}"?</strong></p>
+
+<form method="post">
+    {% csrf_token %}
+    <input class="btn btn-block btn-danger" type="submit" value="Confirm Delete">
+</form>
+<a class="my-4 btn btn-block btn-dark" href={% url 'expert-list' %}>Cancel</a>
+
+{% endblock %}

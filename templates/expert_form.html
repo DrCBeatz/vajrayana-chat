@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+{% comment %} <h1 class="text-danger">{% if object %}Edit Expert{%else %}Add Expert{% endif %}</h1> {% endcomment %}
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <input class="btn btn-block btn-danger" type="submit" value="Save">
+</form>
+
+<a class="mt-4 btn btn-block btn-dark" href="{% url 'expert-list' %}">Cancel</a>
+
+{% endblock %}

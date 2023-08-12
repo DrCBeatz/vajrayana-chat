@@ -1,24 +1,11 @@
+{% extends "_base.html" %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" >
-    <meta http-equiv="x-ua-compatible" content="ie=edge" >
+{% block title %}
+Vajrayana AI Chat
+{% endblock %}
 
-    <title>Vajrayana AI Chat</title>
-    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/vc_home.css' %}">
-    <script defer src="{% static 'js/mdb.min.js' %}"></script>
-    <script defer src="{% static 'js/htmx.min.js' %}"></script>
-</head>
-<body class="container" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <header class="my-4 text-center">
-        <h1 class="title">Vajrayana AI Chat</h1>
-        <hr>
-    </header>
 
-    <main>
+{% block content %}
         <h2 id="title" class="title text-center my-4">Ask Thrangu Rinpoche</h2>
         <select class="select" name="title" hx-get="{% url 'get_title' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
             {% for expert in experts %}
@@ -43,7 +30,6 @@
 
             <div id="answer">
             </div>
-
-    </main>
+{% endblock %}
 </body>
 </html>

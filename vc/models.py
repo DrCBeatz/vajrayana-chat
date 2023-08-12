@@ -10,7 +10,7 @@ tokenizer = tiktoken.get_encoding("cl100k_base")
 
 
 class Model(models.Model):
-    name = models.CharField(max_length=255, default="GPT-3.5-Turbo")
+    name = models.CharField(max_length=255, default="gpt-3.5-turbo")
     context_length = models.IntegerField(default=4096)
     input_token_cost = models.FloatField(default=0.0015)
     output_token_cost = models.FloatField(default=0.002)

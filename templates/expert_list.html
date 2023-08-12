@@ -1,0 +1,18 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+<ul>
+
+    {% for expert in experts %}
+    <ul class="list-group list-group-light">
+        <li class="list-group-item">   
+            <h3><a class="text-danger" href="{% url 'expert-detail' expert.pk %}">{{ expert.name }}</a></h3>
+            <a class="text-dark" href="{% url 'expert-update' expert.pk %}">Edit</a>
+            <a class="text-dark" href="{% url 'expert-delete' expert.pk %}">Delete</a>
+        </li>
+    </ul>
+    {% endfor %}
+</ul>
+<a class="btn btn-block btn-danger" href="{% url 'expert-create' %}">Create New Expert</a>
+{% endblock %}

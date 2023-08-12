@@ -1,4 +1,13 @@
 from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views.generic import (
+    ListView,
+    DetailView,
+    CreateView,
+    UpdateView,
+    DeleteView,
+)
+from .models import Expert, Document
 from .forms import QuestionForm
 from decouple import config
 import pandas as pd
@@ -176,7 +185,11 @@ def home(request):
             )
     else:
         form = QuestionForm()
-    return render(request, "home.html", {"form": form, "experts": experts})
+    return render(
+        request,
+        "home.html",
+        {"form": form, "experts": experts, "title": "Vajrayana AI Chat"},
+    )
 
 
 def get_title(request):
@@ -189,3 +202,123 @@ def get_title(request):
     expert = Expert.objects.get(name=title)
     print(expert)
     return render(request, "_title.html", {"title": title})
+
+
+class ExpertListView(ListView):
+    model = Expert
+    template_name = "expert_list.html"
+    context_object_name = "experts"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "All Experts"
+        return context
+
+
+class ExpertDetailView(DetailView):
+    model = Expert
+    template_name = "expert_detail.html"
+    context_object_name = "expert"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Expert Detail"
+        return context
+
+
+class ExpertCreateView(CreateView):
+    model = Expert
+    template_name = "expert_form.html"
+    fields = ["name", "prompt", "role", "model"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Create New Expert"
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("expert-list")
+
+
+class ExpertUpdateView(UpdateView):
+    model = Expert
+    template_name = "expert_form.html"
+    fields = ["name", "prompt", "role", "model"]
+    success_url = reverse_lazy("expert-list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Edit Expert"
+        return context
+
+
+class ExpertDeleteView(DeleteView):
+    model = Expert
+    template_name = "expert_confirm_delete.html"
+    success_url = reverse_lazy("expert-list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Confirm Delete Expert"
+        return context
+
+
+class DocumentListView(ListView):
+    model = Document
+    template_name = "document_list.html"
+    context_object_name = "documents"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "All Documents"
+        return context
+
+
+class DocumentDetailView(DetailView):
+    model = Document
+    template_name = "document_detail.html"
+    context_object_name = "document"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Document Detail"
+        return context
+
+
+class DocumentCreateView(CreateView):
+    model = Document
+    template_name = "document_form.html"
+    fields = ["title", "expert", "content", "document", "embeddings"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Create New Document"
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("document-list")
+
+
+class DocumentUpdateView(UpdateView):
+    model = Document
+    template_name = "document_form.html"
+    fields = ["title", "expert", "content", "document", "embeddings"]
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Update Document"
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy("document-list")
+
+
+class DocumentDeleteView(DeleteView):
+    model = Document
+    template_name = "document_confirm_delete.html"
+    success_url = reverse_lazy("document-list")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["title"] = "Delete Document"
+        return context
