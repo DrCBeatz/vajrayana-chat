@@ -2,6 +2,8 @@
 
 {% block content %}
 
+{% if conversation.created_at %}<h3 class="text-center text-danger">{{ conversation.created_at }}</h3>{% endif %}     
+
 {% for message in messages %}
 
 <div class="card text-white bg-danger my-4" >

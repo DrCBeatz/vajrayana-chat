@@ -1,11 +1,11 @@
 {% extends "_base.html" %}
-
+{% load crispy_forms_tags %}
 {% block content %}
 
 {% comment %} <h1 class="text-danger">{% if object %}Edit Expert{%else %}Add Expert{% endif %}</h1> {% endcomment %}
 <form method="post">
     {% csrf_token %}
-    {{ form.as_p }}
+    {{ form|crispy }}
     <button class="btn btn-block btn-danger" type="submit">Save</button>
 </form>
 

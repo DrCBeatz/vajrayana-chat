@@ -48,6 +48,8 @@ class Conversation(models.Model):
     title = models.CharField(max_length=255)
     expert = models.ForeignKey(Expert, on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
     def __str__(self):
         return self.title
@@ -58,6 +60,7 @@ class Message(models.Model):
     question = models.TextField()
     answer = models.TextField()
     context = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
 
     def __str__(self):
         return self.question

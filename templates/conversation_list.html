@@ -2,17 +2,21 @@
 
 {% block content %}
 
+{% if conversations %}
 <ul>
     {% for conversation in conversations %}
     <ul class="list-group list-group-light">
         <li class="list-group-item">   
-            <h3><a class="text-danger" href="{% url 'conversation-detail' conversation.pk %}">{{ conversation.title }}</a></h3>
-            <p><strong>Expert:</strong> {{ conversation.expert }} | <a class="text-dark" href="{% url 'conversation-delete' conversation.pk %}">Delete</a></p>
+            <h3><a class="text-danger" href="{% url 'conversation-detail' conversation.pk %}">{{ conversation.title }}</a></h3>{% if conversation.created_at %}<p>{{ conversation.created_at }}</p>{% endif %}     
+            <p><strong>Expert:</strong> {{ conversation.expert }} | <a class="text-dark" href="{% url 'conversation-delete' conversation.pk %}">Delete</a> </p>
             
         </li>
     </ul>
 {% endfor %}
 </ul>
+{% else %}
+    <p>No conversations yet.</p>
+{% endif %}
 
 
 {% endblock %}

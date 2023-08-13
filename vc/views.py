@@ -161,12 +161,17 @@ def home(request):
             question = form.cleaned_data.get("question")
             df = embeddings[expert.name]
             answer = answer_question(df, question=question, debug=DEBUG)
-            if "conversation_id" not in request.session:
+            if (
+                "conversation_id" not in request.session
+                or request.session["new_expert"]
+            ):
                 user = request.user
                 conversation = Conversation.objects.create(
                     title=question, expert=expert, user=user
                 )
                 request.session["conversation_id"] = conversation.id
+                if request.session["new_expert"] == True:
+                    request.session["new_expert"] = False
             else:
                 # This is an existing session, get the current conversation
                 conversation_id = request.session["conversation_id"]
@@ -201,6 +206,8 @@ def get_title(request):
     previous_question = previous_context = previous_answer = ""
     title = request.GET.get("title", "Thrangu Rinpoche")
     expert = Expert.objects.get(name=title)
+    # start new conversation if expert changes
+    request.session["new_expert"] = True
     print(expert)
     return render(request, "_title.html", {"title": title})
 
@@ -308,7 +315,7 @@ class ConversationListView(LoginRequiredMixin, ContextMixin, ListView):
     context_object_name = "conversations"
 
     def get_queryset(self):
-        return Conversation.objects.filter(user=self.request.user)
+        return Conversation.objects.filter(user=self.request.user).order_by("-id")
 
 
 class ConversationDetailView(LoginRequiredMixin, ContextMixin, DetailView):
@@ -318,7 +325,9 @@ class ConversationDetailView(LoginRequiredMixin, ContextMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super(ConversationDetailView, self).get_context_data(**kwargs)
-        context["messages"] = Message.objects.filter(conversation=self.object)
+        context["messages"] = Message.objects.filter(conversation=self.object).order_by(
+            "id"
+        )
         return context
 
 

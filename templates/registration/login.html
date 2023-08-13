@@ -1,4 +1,5 @@
 {% load static %}
+{% load crispy_forms_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -21,8 +22,10 @@
         <br>
             <form method="POST" >
                 {% csrf_token %} 
-                    {{ form.as_p }}
-                <button type="submit" class="btn btn-danger btn-block">Log In</button>
+                    {{ form|crispy }}
+                    <div class="py-3">
+                        <button type="submit" class="btn btn-danger btn-block">Log In</button>
+                    </div>
             </form>
 
     </main>
