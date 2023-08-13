@@ -63,57 +63,63 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         content_changed = False
 
-        # If instance is new and content is not empty, set content_changed to True
-        if not self.pk and self.content:
-            content_changed = True
-        # If instance is not new and content has changed, set content_changed to True
-        elif self.pk:
-            original = Document.objects.get(pk=self.pk)
-            content_changed = original.content != self.content
+        # If a document has been uploaded and content is empty, read the document's content
+        if self.document and not self.content:
+            with self.document.open("rb") as file:
+                file_content = file.read()
+                # Decode bytes to string
+                self.content = file_content.decode("utf-8")
 
-        # If content changed or is not empty on creation, generate embeddings
-        if content_changed:
-            self.embed()
+                # If instance is new and content is not empty, set content_changed to True
+                if not self.pk and self.content:
+                    content_changed = True
+                # If instance is not new and content has changed, set content_changed to True
+                elif self.pk:
+                    original = Document.objects.get(pk=self.pk)
+                    content_changed = original.content != self.content
 
-        super().save(*args, **kwargs)
+                # If content changed or is not empty on creation, generate embeddings
+                if content_changed:
+                    self.embed()
+
+                super().save(*args, **kwargs)
+        else:
+            # If no document is uploaded, follow the usual save procedure
+            super().save(*args, **kwargs)
 
     def embed(self):
         print("running embed function")
+        df = self._prepare_dataframe_from_content()
+        df = self._tokenize_and_shorten_texts(df)
+        self._generate_and_save_embeddings(df)
+
+    def _prepare_dataframe_from_content(self):
+        """Prepare initial dataframe from document content."""
         df = pd.DataFrame([self.content], columns=["text"])
-        print(df.head())
-        # Set the text column to be the raw text with the newlines removed
         df["text"] = self.title + ". " + remove_newlines(df.text)
+        return df
 
-        # Load the cl100k_base tokenizer which is designed to work with the ada-002 model
+    def _tokenize_and_shorten_texts(self, df):
+        """Tokenize the text and split it into chunks if needed."""
         tokenizer = tiktoken.get_encoding("cl100k_base")
-
-        # Tokenize the text and save the number of tokens to a new column
         df["n_tokens"] = df.text.apply(lambda x: len(tokenizer.encode(x)))
-        # ---
 
         shortened = []
-        count = 0
-        # Loop through the dataframe
         for row in df.iterrows():
-            # If the text is None, go to the next row
             if row[1]["text"] is None:
                 continue
-
-            # If the number of tokens is greater than the max number of tokens, split the text into chunks
             if row[1]["n_tokens"] > 500:
                 shortened += split_into_many(row[1]["text"])
-
-            # Otherwise, add the text to the list of shortened texts
             else:
                 shortened.append(row[1]["text"])
-            count += 1
 
         df = pd.DataFrame(shortened, columns=["text"])
         df["n_tokens"] = df.text.apply(lambda x: len(tokenizer.encode(x)))
+        return df
 
-        # ====
+    def _generate_and_save_embeddings(self, df):
+        """Generate embeddings for the document and save them to a file."""
         embedding_list = []
-
         for index, row in df.iterrows():
             embedding = openai.Embedding.create(
                 input=row["text"], engine="text-embedding-ada-002"
@@ -125,8 +131,6 @@ class Document(models.Model):
 
         file_path = f"embeddings/{self.title}_embeddings.parquet"
         df.to_parquet(file_path, engine="pyarrow")
-
-        # Reference the saved parquet file in the embeddings field
 
         with open(file_path, "rb") as f:
             self.embeddings.save(file_path, File(f), save=False)

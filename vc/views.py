@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import (
     ListView,
@@ -204,21 +205,21 @@ def get_title(request):
     return render(request, "_title.html", {"title": title})
 
 
-class ExpertListView(ContextMixin, ListView):
+class ExpertListView(LoginRequiredMixin, ContextMixin, ListView):
     model = Expert
     template_name = "expert_list.html"
     context_object_name = "experts"
     extra_context = {"title": "All Experts"}
 
 
-class ExpertDetailView(ContextMixin, DetailView):
+class ExpertDetailView(LoginRequiredMixin, ContextMixin, DetailView):
     model = Expert
     template_name = "expert_detail.html"
     context_object_name = "expert"
     extra_context = {"title": "Expert Detail"}
 
 
-class ExpertCreateView(ContextMixin, CreateView):
+class ExpertCreateView(LoginRequiredMixin, ContextMixin, CreateView):
     model = Expert
     template_name = "expert_form.html"
     fields = ["name", "prompt", "role", "model"]
@@ -228,7 +229,7 @@ class ExpertCreateView(ContextMixin, CreateView):
         return reverse_lazy("expert-list")
 
 
-class ExpertUpdateView(ContextMixin, UpdateView):
+class ExpertUpdateView(LoginRequiredMixin, ContextMixin, UpdateView):
     model = Expert
     template_name = "expert_form.html"
     fields = ["name", "prompt", "role", "model"]
@@ -236,28 +237,28 @@ class ExpertUpdateView(ContextMixin, UpdateView):
     extra_context = {"title": "Edit Expert"}
 
 
-class ExpertDeleteView(ContextMixin, DeleteView):
+class ExpertDeleteView(LoginRequiredMixin, ContextMixin, DeleteView):
     model = Expert
     template_name = "expert_confirm_delete.html"
     success_url = reverse_lazy("expert-list")
     extra_context = {"title": "Confirm Delete Expert"}
 
 
-class DocumentListView(ContextMixin, ListView):
+class DocumentListView(LoginRequiredMixin, ContextMixin, ListView):
     model = Document
     template_name = "document_list.html"
     context_object_name = "documents"
     extra_context = {"title": "All Documents"}
 
 
-class DocumentDetailView(ContextMixin, DetailView):
+class DocumentDetailView(LoginRequiredMixin, ContextMixin, DetailView):
     model = Document
     template_name = "document_detail.html"
     context_object_name = "document"
     extra_context = {"title": "Document Detail"}
 
 
-class DocumentCreateView(ContextMixin, CreateView):
+class DocumentCreateView(LoginRequiredMixin, ContextMixin, CreateView):
     model = Document
     template_name = "document_form.html"
     fields = ["title", "expert", "content", "document", "embeddings"]
@@ -267,7 +268,7 @@ class DocumentCreateView(ContextMixin, CreateView):
         return reverse_lazy("document-list")
 
 
-class DocumentUpdateView(ContextMixin, UpdateView):
+class DocumentUpdateView(LoginRequiredMixin, ContextMixin, UpdateView):
     model = Document
     template_name = "document_form.html"
     fields = ["title", "expert", "content", "document", "embeddings"]
@@ -277,14 +278,14 @@ class DocumentUpdateView(ContextMixin, UpdateView):
         return reverse_lazy("document-list")
 
 
-class DocumentDeleteView(ContextMixin, DeleteView):
+class DocumentDeleteView(LoginRequiredMixin, ContextMixin, DeleteView):
     model = Document
     template_name = "document_confirm_delete.html"
     success_url = reverse_lazy("document-list")
     extra_context = {"title": "Delete Document"}
 
 
-class ConversationListView(ContextMixin, ListView):
+class ConversationListView(LoginRequiredMixin, ContextMixin, ListView):
     model = Conversation
     template_name = "conversation_list.html"
     extra_context = {"title": "List of Conversations"}
@@ -294,7 +295,7 @@ class ConversationListView(ContextMixin, ListView):
         return Conversation.objects.filter(user=self.request.user)
 
 
-class ConversationDetailView(ContextMixin, DetailView):
+class ConversationDetailView(LoginRequiredMixin, ContextMixin, DetailView):
     model = Conversation
     template_name = "conversation_detail.html"
     extra_context = {"title": f"Conversation with {expert}"}
@@ -305,7 +306,7 @@ class ConversationDetailView(ContextMixin, DetailView):
         return context
 
 
-class ConversationDeleteView(ContextMixin, DeleteView):
+class ConversationDeleteView(LoginRequiredMixin, ContextMixin, DeleteView):
     model = Conversation
     template_name = "conversation_confirm_delete.html"
     success_url = reverse_lazy("conversation-list")
