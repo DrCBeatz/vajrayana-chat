@@ -32,4 +32,17 @@ urlpatterns = [
         views.DocumentDeleteView.as_view(),
         name="document-delete",
     ),
+    path(
+        "conversations/", views.ConversationListView.as_view(), name="conversation-list"
+    ),
+    path(
+        "conversations/<int:pk>/",
+        views.ConversationDetailView.as_view(),
+        name="conversation-detail",
+    ),
+    path(
+        "conversations/<int:pk>/delete/",
+        views.ConversationDeleteView.as_view(),
+        name="conversation-delete",
+    ),
 ]

@@ -17,6 +17,7 @@ from .models import Model, Expert, Conversation, Message, Document
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .timer_decorator import timer
+from .mixins import ContextMixin
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -35,7 +36,6 @@ previous_context = ""
 previous_answer = ""
 
 
-@timer
 def get_embeddings(experts=Expert.objects.all()):
     print("Getting embeddings..")
     embeddings = {}
@@ -204,121 +204,109 @@ def get_title(request):
     return render(request, "_title.html", {"title": title})
 
 
-class ExpertListView(ListView):
+class ExpertListView(ContextMixin, ListView):
     model = Expert
     template_name = "expert_list.html"
     context_object_name = "experts"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "All Experts"
-        return context
+    extra_context = {"title": "All Experts"}
 
 
-class ExpertDetailView(DetailView):
+class ExpertDetailView(ContextMixin, DetailView):
     model = Expert
     template_name = "expert_detail.html"
     context_object_name = "expert"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Expert Detail"
-        return context
+    extra_context = {"title": "Expert Detail"}
 
 
-class ExpertCreateView(CreateView):
+class ExpertCreateView(ContextMixin, CreateView):
     model = Expert
     template_name = "expert_form.html"
     fields = ["name", "prompt", "role", "model"]
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Create New Expert"
-        return context
+    extra_context = {"title": "Create New Expert"}
 
     def get_success_url(self):
         return reverse_lazy("expert-list")
 
 
-class ExpertUpdateView(UpdateView):
+class ExpertUpdateView(ContextMixin, UpdateView):
     model = Expert
     template_name = "expert_form.html"
     fields = ["name", "prompt", "role", "model"]
     success_url = reverse_lazy("expert-list")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Edit Expert"
-        return context
+    extra_context = {"title": "Edit Expert"}
 
 
-class ExpertDeleteView(DeleteView):
+class ExpertDeleteView(ContextMixin, DeleteView):
     model = Expert
     template_name = "expert_confirm_delete.html"
     success_url = reverse_lazy("expert-list")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Confirm Delete Expert"
-        return context
+    extra_context = {"title": "Confirm Delete Expert"}
 
 
-class DocumentListView(ListView):
+class DocumentListView(ContextMixin, ListView):
     model = Document
     template_name = "document_list.html"
     context_object_name = "documents"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "All Documents"
-        return context
+    extra_context = {"title": "All Documents"}
 
 
-class DocumentDetailView(DetailView):
+class DocumentDetailView(ContextMixin, DetailView):
     model = Document
     template_name = "document_detail.html"
     context_object_name = "document"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Document Detail"
-        return context
+    extra_context = {"title": "Document Detail"}
 
 
-class DocumentCreateView(CreateView):
+class DocumentCreateView(ContextMixin, CreateView):
     model = Document
     template_name = "document_form.html"
     fields = ["title", "expert", "content", "document", "embeddings"]
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Create New Document"
-        return context
+    extra_context = {"title": "Create New Document"}
 
     def get_success_url(self):
         return reverse_lazy("document-list")
 
 
-class DocumentUpdateView(UpdateView):
+class DocumentUpdateView(ContextMixin, UpdateView):
     model = Document
     template_name = "document_form.html"
     fields = ["title", "expert", "content", "document", "embeddings"]
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Update Document"
-        return context
+    extra_context = {"title": "Update Document"}
 
     def get_success_url(self):
         return reverse_lazy("document-list")
 
 
-class DocumentDeleteView(DeleteView):
+class DocumentDeleteView(ContextMixin, DeleteView):
     model = Document
     template_name = "document_confirm_delete.html"
     success_url = reverse_lazy("document-list")
+    extra_context = {"title": "Delete Document"}
+
+
+class ConversationListView(ContextMixin, ListView):
+    model = Conversation
+    template_name = "conversation_list.html"
+    extra_context = {"title": "List of Conversations"}
+    context_object_name = "conversations"
+
+    def get_queryset(self):
+        return Conversation.objects.filter(user=self.request.user)
+
+
+class ConversationDetailView(ContextMixin, DetailView):
+    model = Conversation
+    template_name = "conversation_detail.html"
+    extra_context = {"title": f"Conversation with {expert}"}
 
     def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["title"] = "Delete Document"
+        context = super(ConversationDetailView, self).get_context_data(**kwargs)
+        context["messages"] = Message.objects.filter(conversation=self.object)
         return context
+
+
+class ConversationDeleteView(ContextMixin, DeleteView):
+    model = Conversation
+    template_name = "conversation_confirm_delete.html"
+    success_url = reverse_lazy("conversation-list")
+    extra_context = {"title": "Delete Conversation"}

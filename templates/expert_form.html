@@ -6,9 +6,11 @@
 <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
-    <input class="btn btn-block btn-danger" type="submit" value="Save">
+    <button class="btn btn-block btn-danger" type="submit">Save</button>
 </form>
 
-<a class="mt-4 btn btn-block btn-dark" href="{% url 'expert-list' %}">Cancel</a>
+<div class="my-4">
+    <a class="btn btn-block btn-dark" href="{% url 'expert-list' %}">Cancel</a>
+</div>
 
 {% endblock %}

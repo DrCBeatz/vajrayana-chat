@@ -5,8 +5,10 @@
 <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
     {{ form.as_p }}
-    <input class="btn btn-block btn-danger" type="submit" value="Save">
+    <button class="btn btn-block btn-danger" type="submit">Save</button>
 </form>
-<a class="my-4 btn btn-block btn-dark" href="{% url 'document-list' %}">Cancel</a>
+<div class="my-4">
+    <a class="btn btn-block btn-dark" href="{% url 'document-list' %}">Cancel</a>
+</div>
 
 {% endblock %}

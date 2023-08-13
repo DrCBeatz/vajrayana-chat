@@ -1,11 +1,11 @@
 {% extends "_base.html" %}
 
 {% block content %}
-    <p><strong>Are you sure you wnt to delete the document "{{ object.title }}"?</strong></p>
+    <p><strong>Are you sure you want to delete the document "{{ object.title }}"?</strong></p>
 
     <form method="post">
         {% csrf_token %}
-        <input class="btn btn-block btn-danger" type="submit" value="Confirm Delete">
+        <button class="btn btn-block btn-danger" type="submit">Confirm Delete</button>
     </form>
     <a class="my-4 btn btn-block btn-dark" href="{% url 'document-list' %}">Cancel</a>
 {% endblock %}

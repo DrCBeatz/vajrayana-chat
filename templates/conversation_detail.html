@@ -1,0 +1,23 @@
+{% extends "_base.html" %}
+
+{% block content %}
+
+{% for message in messages %}
+
+<div class="card text-white bg-danger my-4" >
+    
+    <div class="card-header"><h5>{{ message.question }}</h5></div>
+    
+    <div class="card-body">
+        <p class="card-text">{{ message.answer }}</p>
+    </div>
+    
+</div>
+
+<hr class="mt-4">
+{% endfor %}
+
+<div class="my-4">
+    <a href="{% url 'conversation-list' %}" class="btn btn-block btn-danger">Back To All Conversations</a>
+</div>
+{% endblock %}

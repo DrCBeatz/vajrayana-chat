@@ -1,0 +1,14 @@
+{% extends "_base.html" %}
+
+{% block content %}
+    <p><strong>Are you sure you wnt to delete the conversation "{{ object.title }}"?</strong></p>
+
+    <form method="post" action="{% url 'conversation-delete' conversation.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-block btn-danger">Confirm Delete</button>
+    </form>
+    <div class="my-4">
+        <a class="btn btn-block btn-dark" href="{% url 'conversation-list' %}">Cancel</a>
+    </div>
+{% endblock %}
+

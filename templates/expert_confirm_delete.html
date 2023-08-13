@@ -6,7 +6,7 @@
 
 <form method="post">
     {% csrf_token %}
-    <input class="btn btn-block btn-danger" type="submit" value="Confirm Delete">
+    <button class="btn btn-block btn-danger" type="submit">Confirm Delete</button>
 </form>
 <a class="my-4 btn btn-block btn-dark" href={% url 'expert-list' %}>Cancel</a>
 
