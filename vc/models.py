@@ -9,6 +9,8 @@ from bs4 import BeautifulSoup
 import requests
 from .embed_functions import remove_newlines, split_into_many
 
+from youtube_transcript_api import YouTubeTranscriptApi
+
 tokenizer = tiktoken.get_encoding("cl100k_base")
 
 
@@ -76,58 +78,58 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         content_changed = False
 
-        # If an html_url has been provided and content is empty
-        if self.html_url and not self.content:
+        # Check if the instance is new or the content has changed
+        if not self.pk:
+            content_changed = bool(self.content)
+        else:
+            original = Document.objects.get(pk=self.pk)
+            content_changed = original.content != self.content
+
+        # If content hasn't changed, check for html_url
+        if not content_changed and self.html_url and not self.content:
             response = requests.get(self.html_url)
             soup = BeautifulSoup(response.content, "html.parser")
             # Extract text from the HTML
             raw_text = soup.get_text()
             # Clean the text
             self.content = clean_text(raw_text)
+            content_changed = True
 
-            if not self.pk and self.content:
+        # If content hasn't changed, check for document
+        if not content_changed and self.document and not self.content:
+            # Check if the uploaded file is a PDF
+            if self.document.name.endswith(".pdf"):
+                # Extract text from PDF using PdfReader
+                pdf_reader = PdfReader(self.document)
+                text_content = ""
+                for page in pdf_reader.pages:
+                    text_content += page.extract_text()
+                self.content = text_content
+            else:
+                # For text files, read and decode
+                file_content = self.document.read()
+                self.content = file_content.decode("utf-8")
+            content_changed = True
+
+        if not content_changed and self.youtube_url and not self.content:
+            video_id = self.youtube_url.split("v=")[1].split("&")[
+                0
+            ]  # extract video ID from URL
+            try:
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                transcript_text = " ".join([entry["text"] for entry in transcript])
+                self.content = transcript_text
                 content_changed = True
-            # If instance is not new and content has changed, set content_changed to True
-            elif self.pk:
-                original = Document.objects.get(pk=self.pk)
-                content_changed = original.content != self.content
+            except Exception as e:
+                # Handle errors (e.g., video doesn't have a transcript, wrong video ID, etc.)
+                print(f"Error fetching transcript: {e}")
 
-            # If content changed or is not empty on creation, generate embeddings
-            if content_changed:
-                self.embed()
+        # If content changed or is not empty on creation, generate embeddings
+        if content_changed:
+            self.embed()
 
-        # If a document has been uploaded and content is empty
-        if self.document and not self.content:
-            with self.document.open("rb") as file:
-                # Check if the uploaded file is a PDF
-                if self.document.name.endswith(".pdf"):
-                    # Extract text from PDF using PdfReader
-                    pdf_reader = PdfReader(file)
-                    text_content = ""
-                    for page in pdf_reader.pages:
-                        text_content += page.extract_text()
-                    self.content = text_content
-                else:
-                    # For text files, read and decode as before
-                    file_content = file.read()
-                    self.content = file_content.decode("utf-8")
-
-                # If instance is new and content is not empty, set content_changed to True
-                if not self.pk and self.content:
-                    content_changed = True
-                # If instance is not new and content has changed, set content_changed to True
-                elif self.pk:
-                    original = Document.objects.get(pk=self.pk)
-                    content_changed = original.content != self.content
-
-                # If content changed or is not empty on creation, generate embeddings
-                if content_changed:
-                    self.embed()
-
-                super().save(*args, **kwargs)
-        else:
-            # If no document is uploaded, follow the usual save procedure
-            super().save(*args, **kwargs)
+        # Save the model instance to the database in all cases
+        super().save(*args, **kwargs)
 
     def embed(self):
         print("running embed function")

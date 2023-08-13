@@ -18,6 +18,7 @@ django-htmx = "*"
 pypdf2 = "*"
 pyarrow = "*"
 django-cleanup = "*"
+django-crispy-forms = "*"
 
 [dev-packages]
 
