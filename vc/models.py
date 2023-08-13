@@ -5,9 +5,19 @@ import openai
 from django.core.files import File
 import tiktoken
 from PyPDF2 import PdfReader
+from bs4 import BeautifulSoup
+import requests
 from .embed_functions import remove_newlines, split_into_many
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
+
+
+def clean_text(text):
+    # Replace multiple newline characters with a single newline
+    text = "\n".join(line.strip() for line in text.splitlines() if line.strip())
+    # Remove any remaining whitespace
+    text = text.strip()
+    return text
 
 
 class Model(models.Model):
@@ -57,14 +67,34 @@ class Document(models.Model):
     content = models.TextField(null=True, blank=True)
     document = models.FileField(upload_to="documents/", null=True, blank=True)
     embeddings = models.FileField(upload_to="embeddings/", null=True, blank=True)
-    # html_url = models.URLField(max_length=2000, blank=True, null=True)
-    # youtube_url = models.URLField(max_length=2000, blank=True, null=True)
+    html_url = models.URLField(max_length=2000, blank=True, null=True)
+    youtube_url = models.URLField(max_length=2000, blank=True, null=True)
 
     def __str__(self):
         return self.title
 
     def save(self, *args, **kwargs):
         content_changed = False
+
+        # If an html_url has been provided and content is empty
+        if self.html_url and not self.content:
+            response = requests.get(self.html_url)
+            soup = BeautifulSoup(response.content, "html.parser")
+            # Extract text from the HTML
+            raw_text = soup.get_text()
+            # Clean the text
+            self.content = clean_text(raw_text)
+
+            if not self.pk and self.content:
+                content_changed = True
+            # If instance is not new and content has changed, set content_changed to True
+            elif self.pk:
+                original = Document.objects.get(pk=self.pk)
+                content_changed = original.content != self.content
+
+            # If content changed or is not empty on creation, generate embeddings
+            if content_changed:
+                self.embed()
 
         # If a document has been uploaded and content is empty
         if self.document and not self.content:

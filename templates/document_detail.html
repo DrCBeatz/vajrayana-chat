@@ -8,6 +8,8 @@
 
 <p><strong>Content:</strong> {{ document.content }} </p>
 
-<a class="my-4 btn btn-block btn-danger" href={% url 'document-list' %}>Back To All Documents</a>
+<div class="my-4">
+    <a class="btn btn-block btn-danger" href={% url 'document-list' %}>Back To All Documents</a>
+</div>
 
 {% endblock %}

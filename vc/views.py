@@ -261,7 +261,15 @@ class DocumentDetailView(LoginRequiredMixin, ContextMixin, DetailView):
 class DocumentCreateView(LoginRequiredMixin, ContextMixin, CreateView):
     model = Document
     template_name = "document_form.html"
-    fields = ["title", "expert", "content", "document", "embeddings"]
+    fields = [
+        "title",
+        "expert",
+        "content",
+        "document",
+        "embeddings",
+        "html_url",
+        "youtube_url",
+    ]
     extra_context = {"title": "Create New Document"}
 
     def get_success_url(self):
@@ -271,7 +279,15 @@ class DocumentCreateView(LoginRequiredMixin, ContextMixin, CreateView):
 class DocumentUpdateView(LoginRequiredMixin, ContextMixin, UpdateView):
     model = Document
     template_name = "document_form.html"
-    fields = ["title", "expert", "content", "document", "embeddings"]
+    fields = [
+        "title",
+        "expert",
+        "content",
+        "document",
+        "embeddings",
+        "html_url",
+        "youtube_url",
+    ]
     extra_context = {"title": "Update Document"}
 
     def get_success_url(self):
