@@ -170,8 +170,9 @@ def home(request):
                     title=question, expert=expert, user=user
                 )
                 request.session["conversation_id"] = conversation.id
-                if request.session["new_expert"] == True:
-                    request.session["new_expert"] = False
+                if "new_expert" in request.session:
+                    if request.session["new_expert"] == True:
+                        request.session["new_expert"] = False
             else:
                 # This is an existing session, get the current conversation
                 conversation_id = request.session["conversation_id"]
