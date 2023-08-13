@@ -4,6 +4,7 @@ import pandas as pd
 import openai
 from django.core.files import File
 import tiktoken
+from PyPDF2 import PdfReader
 from .embed_functions import remove_newlines, split_into_many
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -56,6 +57,8 @@ class Document(models.Model):
     content = models.TextField(null=True, blank=True)
     document = models.FileField(upload_to="documents/", null=True, blank=True)
     embeddings = models.FileField(upload_to="embeddings/", null=True, blank=True)
+    # html_url = models.URLField(max_length=2000, blank=True, null=True)
+    # youtube_url = models.URLField(max_length=2000, blank=True, null=True)
 
     def __str__(self):
         return self.title
@@ -63,12 +66,21 @@ class Document(models.Model):
     def save(self, *args, **kwargs):
         content_changed = False
 
-        # If a document has been uploaded and content is empty, read the document's content
+        # If a document has been uploaded and content is empty
         if self.document and not self.content:
             with self.document.open("rb") as file:
-                file_content = file.read()
-                # Decode bytes to string
-                self.content = file_content.decode("utf-8")
+                # Check if the uploaded file is a PDF
+                if self.document.name.endswith(".pdf"):
+                    # Extract text from PDF using PdfReader
+                    pdf_reader = PdfReader(file)
+                    text_content = ""
+                    for page in pdf_reader.pages:
+                        text_content += page.extract_text()
+                    self.content = text_content
+                else:
+                    # For text files, read and decode as before
+                    file_content = file.read()
+                    self.content = file_content.decode("utf-8")
 
                 # If instance is new and content is not empty, set content_changed to True
                 if not self.pk and self.content:
