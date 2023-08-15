@@ -17,17 +17,19 @@
         <h1 class="title text-danger">Vajrayana Chat Log In</h1>
         <hr>
     </header>
-
+    
     <main>
         <br>
-            <form method="POST" >
-                {% csrf_token %} 
-                    {{ form|crispy }}
-                    <div class="py-3">
-                        <button type="submit" class="btn btn-danger btn-block">Log In</button>
-                    </div>
-            </form>
-
+        <form method="POST" >
+            {% csrf_token %} 
+            {{ form|crispy }}
+            <div class="py-3">
+                <button type="submit" class="btn btn-danger btn-block">Log In</button>
+            </div>
+        </form>
+        <div class="text-center">
+            <img class="img-fluid rounded my-2" src="{% static 'img/om_mani_padme_hum_v2.jpg' %}" alt="Om Mani Padme Hum"  >
+        </div>
     </main>
 </body>
 </html>
