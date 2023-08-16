@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     # Local apps
     "vc",
     "accounts",
+    "django_cleanup.apps.CleanupConfig",
 ]
 
 MIDDLEWARE = [

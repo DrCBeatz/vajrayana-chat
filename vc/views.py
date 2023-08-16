@@ -8,7 +8,6 @@ from django.views.generic import (
     UpdateView,
     DeleteView,
 )
-from .models import Expert, Document
 from .forms import QuestionForm
 from decouple import config
 import pandas as pd
@@ -186,7 +185,7 @@ def home(request):
             )
 
             message.save()
-            answer = answer_question(df, question=question, debug=DEBUG)
+            # answer = answer_question(df, question=question, debug=DEBUG)
             return render(
                 request, "answer.html", {"answer": answer, "question": question}
             )
