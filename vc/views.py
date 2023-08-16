@@ -30,11 +30,6 @@ MAX_TOKENS = 300
 
 DEBUG = True
 
-curent_context = ""
-previous_question = ""
-previous_context = ""
-previous_answer = ""
-
 
 def get_embeddings(experts=Expert.objects.all()):
     print("Getting embeddings..")
@@ -86,6 +81,7 @@ def create_context(question, df, max_len=MAX_LEN, size="ada"):
 
 def answer_question(
     df,
+    conversation_id=None,
     model=MODEL,
     question=f"Who is {expert}?",
     max_len=MAX_LEN,
@@ -104,11 +100,18 @@ def answer_question(
         max_len=max_len,
         size=size,
     )
-    global current_context
-    current_context = context
-    global previous_question
-    global previous_context
-    global previous_answer
+
+    previous_context = ""
+    previous_question = ""
+    previous_answer = ""
+
+    if conversation_id:
+        last_message = Message.objects.filter(conversation_id=conversation_id).last()
+        if last_message:
+            previous_context = last_message.context
+            previous_question = last_message.question
+            previous_answer = last_message.answer
+
     # If debug, print the raw model response
     if debug:
         print("Context:\n" + context)
@@ -143,7 +146,7 @@ def answer_question(
         previous_context = context
         answer = response["choices"][0]["message"]["content"].strip()
         previous_answer = answer
-        return answer
+        return answer, context
     except Exception as e:
         print(e)
         return ""
@@ -159,7 +162,14 @@ def home(request):
         if form.is_valid():
             question = form.cleaned_data.get("question")
             df = embeddings[expert.name]
-            answer = answer_question(df, question=question, debug=DEBUG)
+            # Return both answer and context
+            answer, context = answer_question(
+                df,
+                question=question,
+                debug=DEBUG,
+                conversation_id=request.session.get("conversation_id"),
+            )
+
             if (
                 "conversation_id" not in request.session
                 or request.session["new_expert"]
@@ -181,7 +191,7 @@ def home(request):
                 conversation=conversation,
                 question=question,
                 answer=answer,
-                context=current_context,
+                context=context,
             )
 
             message.save()
@@ -200,10 +210,7 @@ def home(request):
 
 def change_expert(request):
     global expert
-    global previous_question
-    global previous_context
-    global previous_answer
-    previous_question = previous_context = previous_answer = ""
+
     title = request.GET.get("title", "Thrangu Rinpoche")
     expert = Expert.objects.get(name=title)
     # start new conversation if expert changes
