@@ -7,7 +7,7 @@ Vajrayana AI Chat
 
 {% block content %}
         <h2 id="title" class="title text-center my-4">Ask Thrangu Rinpoche</h2>
-        <select class="select" name="title" hx-get="{% url 'get_title' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
+        <select class="select" name="title" hx-get="{% url 'change_expert' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
             {% for expert in experts %}
                 <option value="{{ expert }}">{{ expert }}</option>
             {% endfor %}

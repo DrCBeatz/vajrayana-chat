@@ -185,7 +185,7 @@ def home(request):
             )
 
             message.save()
-            # answer = answer_question(df, question=question, debug=DEBUG)
+
             return render(
                 request, "answer.html", {"answer": answer, "question": question}
             )
@@ -198,7 +198,7 @@ def home(request):
     )
 
 
-def get_title(request):
+def change_expert(request):
     global expert
     global previous_question
     global previous_context
