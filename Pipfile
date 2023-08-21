@@ -20,6 +20,9 @@ pyarrow = "*"
 django-cleanup = "*"
 django-crispy-forms = "*"
 crispy-bootstrap5 = "*"
+pytest = "*"
+pytest-django = "*"
+reportlab = "*"
 
 [dev-packages]
 

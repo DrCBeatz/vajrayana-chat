@@ -56,7 +56,7 @@ def get_embeddings(experts=Expert.objects.all()):
     return embeddings
 
 
-def create_context(question, df, max_len=MAX_LEN, size="ada"):
+def create_context(question, df, max_len=1800, size="ada"):
     q_embeddings = openai.Embedding.create(
         input=question, engine="text-embedding-ada-002"
     )["data"][0]["embedding"]
@@ -82,12 +82,12 @@ def create_context(question, df, max_len=MAX_LEN, size="ada"):
 def answer_question(
     df,
     conversation_id=None,
-    model=MODEL,
-    question=f"Who is {expert}?",
-    max_len=MAX_LEN,
+    model="gpt-3.5-turbo",
+    question=f"Who is Thrangu Rinpoche?",
+    max_len=1800,
     size="ada",
     debug=False,
-    max_tokens=MAX_TOKENS,
+    max_tokens=300,
     stop_sequence=None,
 ):
     """
