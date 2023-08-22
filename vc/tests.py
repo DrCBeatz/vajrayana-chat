@@ -7,6 +7,7 @@ import openai
 from decouple import config
 from reportlab.pdfgen import canvas
 from io import BytesIO
+from unittest import mock
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -167,6 +168,33 @@ def test_create_message():
     )
     assert Message.objects.count() == 1
     assert message.question == "TestQuestion"
+
+
+def get_mock_response(content):
+    """Helper function to mock HTTP responses."""
+    response = mock.Mock()
+    response.content = content.encode()
+    return response
+
+
+@pytest.mark.django_db
+def test_document_save_with_html_content(experts):
+    # Mock the external call to get the HTML content
+    with mock.patch(
+        "requests.get",
+        return_value=get_mock_response("<html><body>Hello, World!</body></html>"),
+    ):
+        doc = Document(
+            title="Test Doc", expert=experts[0], html_url="http://example.com"
+        )
+        doc.save()
+
+        assert doc.content == "Hello, World!"
+
+
+def test_has_content_changed_new_instance():
+    doc = Document(title="Test Doc", content="Test content")
+    assert doc._has_content_changed() is True
 
 
 # views tests
