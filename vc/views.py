@@ -172,7 +172,7 @@ def home(request):
 
             if (
                 "conversation_id" not in request.session
-                or request.session["new_expert"]
+                or "new_expert" in request.session
             ):
                 user = request.user
                 conversation = Conversation.objects.create(
