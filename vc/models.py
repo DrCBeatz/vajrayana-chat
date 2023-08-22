@@ -79,60 +79,55 @@ class Document(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        content_changed = False
+        content_changed = self._has_content_changed()
 
-        # Check if the instance is new or the content has changed
-        if not self.pk:
-            content_changed = bool(self.content)
-        else:
-            original = Document.objects.get(pk=self.pk)
-            content_changed = original.content != self.content
+        if not self.content:
+            if not content_changed and self.html_url:
+                self._update_content_from_html()
+            if not content_changed and self.document:
+                self._update_content_from_document()
+            if not content_changed and self.youtube_url:
+                self._update_content_from_youtube()
 
-        # If content hasn't changed, check for html_url
-        if not content_changed and self.html_url and not self.content:
-            response = requests.get(self.html_url)
-            soup = BeautifulSoup(response.content, "html.parser")
-            # Extract text from the HTML
-            raw_text = soup.get_text()
-            # Clean the text
-            self.content = clean_text(raw_text)
-            content_changed = True
-
-        # If content hasn't changed, check for document
-        if not content_changed and self.document and not self.content:
-            # Check if the uploaded file is a PDF
-            if self.document.name.endswith(".pdf"):
-                # Extract text from PDF using PdfReader
-                pdf_reader = PdfReader(self.document)
-                text_content = ""
-                for page in pdf_reader.pages:
-                    text_content += page.extract_text()
-                self.content = text_content
-            else:
-                # For text files, read and decode
-                file_content = self.document.read()
-                self.content = file_content.decode("utf-8")
-            content_changed = True
-
-        if not content_changed and self.youtube_url and not self.content:
-            video_id = self.youtube_url.split("v=")[1].split("&")[
-                0
-            ]  # extract video ID from URL
-            try:
-                transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                transcript_text = " ".join([entry["text"] for entry in transcript])
-                self.content = transcript_text
-                content_changed = True
-            except Exception as e:
-                # Handle errors (e.g., video doesn't have a transcript, wrong video ID, etc.)
-                print(f"Error fetching transcript: {e}")
-
-        # If content changed or is not empty on creation, generate embeddings
-        if content_changed:
+        if content_changed or self.content:
             self.embed()
 
-        # Save the model instance to the database in all cases
         super().save(*args, **kwargs)
+
+    def _has_content_changed(self):
+        """Check if the content of the document has changed."""
+        if not self.pk:
+            return bool(self.content)
+
+        original = Document.objects.get(pk=self.pk)
+        return original.content != self.content
+
+    def _update_content_from_html(self):
+        """Update content from the given HTML URL."""
+        response = requests.get(self.html_url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        raw_text = soup.get_text()
+        self.content = clean_text(raw_text)
+
+    def _update_content_from_document(self):
+        """Update content from the uploaded document."""
+        if self.document.name.endswith(".pdf"):
+            pdf_reader = PdfReader(self.document)
+            text_content = "".join([page.extract_text() for page in pdf_reader.pages])
+            self.content = text_content
+        else:
+            file_content = self.document.read()
+            self.content = file_content.decode("utf-8")
+
+    def _update_content_from_youtube(self):
+        """Update content from the given YouTube URL."""
+        video_id = self.youtube_url.split("v=")[1].split("&")[0]
+        try:
+            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            transcript_text = " ".join([entry["text"] for entry in transcript])
+            self.content = transcript_text
+        except Exception as e:
+            print(f"Error fetching transcript: {e}")
 
     def embed(self):
         print("running embed function")
