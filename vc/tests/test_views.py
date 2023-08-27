@@ -8,6 +8,9 @@ from decouple import config
 from reportlab.pdfgen import canvas
 from io import BytesIO
 from unittest import mock
+import pandas as pd
+import numpy as np
+
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -89,6 +92,32 @@ def documents(db, user, experts):
 
 
 # views tests
+
+
+@pytest.mark.django_db
+def test_get_embeddings(experts, documents):
+    from vc.views import get_embeddings
+
+    expert1 = experts[0]
+    expert2 = experts[1]
+    Document.objects.create(
+        title="Doc1",
+        expert=expert1,
+        content="This is a test document",
+        embeddings="embeddings/thrangu_rinpoche_embeddings.parquet",
+    )
+
+    Document.objects.create(
+        title="Doc2",
+        expert=expert2,
+        content="This is another test document",
+        embeddings="embeddings/mingyur_rinpoche_embeddings.parquet",
+    )
+
+    result = get_embeddings()
+
+    assert "Expert1" in result
+    assert "Expert2" in result
 
 
 @pytest.mark.django_db
