@@ -95,7 +95,7 @@ def documents(db, user, experts):
 
 
 @pytest.mark.django_db
-def test_get_embeddings(experts, documents):
+def test_get_embeddings(experts):
     from vc.views import get_embeddings
 
     expert1 = experts[0]
@@ -118,6 +118,27 @@ def test_get_embeddings(experts, documents):
 
     assert "Expert1" in result
     assert "Expert2" in result
+
+
+@pytest.mark.django_db
+@mock.patch("vc.views.create_context", return_value="some context")
+@mock.patch(
+    "openai.ChatCompletion.create",
+    return_value={"choices": [{"message": {"content": "some answer"}}]},
+)
+def test_answer_question(mock_create_context, mock_chat_completion):
+    from vc.views import answer_question
+
+    df = pd.DataFrame(
+        {
+            "text": ["text1", "text2"],
+            "embeddings": ["embedding1", "embedding2"],
+            "n_tokens": [10, 15],
+        }
+    )
+    answer, context = answer_question(df)
+    assert answer == "some answer"
+    assert context == "some context"
 
 
 @pytest.mark.django_db
