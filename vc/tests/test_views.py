@@ -142,6 +142,27 @@ def test_answer_question(mock_create_context, mock_chat_completion):
 
 
 @pytest.mark.django_db
+@mock.patch("vc.views.create_context", return_value="some context")
+@mock.patch(
+    "openai.ChatCompletion.create",
+    return_value={"choices": [{"message": {"content": "some answer"}}]},
+)
+def test_get_answer(mock_create_context, mock_chat_completion):
+    from vc.views import answer_question
+
+    df = pd.DataFrame(
+        {
+            "text": ["text1", "text2"],
+            "embeddings": ["embedding1", "embedding2"],
+            "n_tokens": [10, 15],
+        }
+    )
+    answer, context = answer_question(df)
+    assert answer == "some answer"
+    assert context == "some context"
+
+
+@pytest.mark.django_db
 def test_home_view_get(client):
     # Create a user and log in
     User = get_user_model()
