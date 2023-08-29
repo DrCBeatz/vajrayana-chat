@@ -18,6 +18,7 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .timer_decorator import timer
 from .mixins import ContextMixin
+from django.core.cache import cache
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -32,27 +33,30 @@ DEBUG = True
 
 
 def get_embeddings(experts=Expert.objects.all()):
-    print("Getting embeddings..")
-    embeddings = {}
-    documents = Document.objects.all()
+    embeddings = cache.get("embeddings")
 
-    for e in experts:
-        df_temp = pd.DataFrame()
-        embeddings[e.name] = pd.DataFrame()
+    if not embeddings:
+        print("Getting embeddings..")
+        embeddings = {}
+        documents = Document.objects.all()
 
-        for document in documents:
-            if e.name == document.expert.name:
-                try:
-                    df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
-                    embeddings[e.name] = pd.concat(
-                        [
-                            df_temp,
-                            embeddings[e.name],
-                        ],
-                        ignore_index=True,
-                    )
-                except:
-                    print("No embeddings for " + document.title)
+        for e in experts:
+            df_temp = pd.DataFrame()
+            embeddings[e.name] = pd.DataFrame()
+
+            for document in documents:
+                if e.name == document.expert.name:
+                    try:
+                        df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
+                        embeddings[e.name] = pd.concat(
+                            [
+                                df_temp,
+                                embeddings[e.name],
+                            ],
+                            ignore_index=True,
+                        )
+                    except:
+                        print("No embeddings for " + document.title)
     return embeddings
 
 

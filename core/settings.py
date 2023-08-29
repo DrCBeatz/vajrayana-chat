@@ -38,6 +38,8 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
 ]
 
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
+
 ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [

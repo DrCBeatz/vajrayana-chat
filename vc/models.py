@@ -74,6 +74,7 @@ class Document(models.Model):
     embeddings = models.FileField(upload_to="embeddings/", null=True, blank=True)
     html_url = models.URLField(max_length=2000, blank=True, null=True)
     youtube_url = models.URLField(max_length=2000, blank=True, null=True)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.title
