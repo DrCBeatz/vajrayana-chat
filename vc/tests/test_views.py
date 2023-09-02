@@ -1,4 +1,5 @@
 import pytest
+from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from vc.models import Model, Expert, Conversation, Message, Document
@@ -10,6 +11,7 @@ from io import BytesIO
 from unittest import mock
 import pandas as pd
 import numpy as np
+from django.core.cache import cache
 
 
 openai.api_key = config("OPENAI_API_KEY")
@@ -118,6 +120,8 @@ def test_get_embeddings(experts):
 
     assert "Expert1" in result
     assert "Expert2" in result
+
+
 
 
 @pytest.mark.django_db

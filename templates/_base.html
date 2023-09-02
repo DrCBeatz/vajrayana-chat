@@ -64,6 +64,11 @@
 
     {% block extra_js %}
     <script>
+        
+        document.addEventListener('htmx:afterRequest', function(evt) {
+            changeSelectedExpert();
+        });
+        
         function changeSelectedExpert() {
             const currentExpert = document.querySelector('#title').textContent.substring(4);
             const selectElement = document.querySelector('.select');

@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -20,6 +20,7 @@ from .timer_decorator import timer
 from .mixins import ContextMixin
 from django.core.cache import cache
 from django.db.models import Max
+from django.core.exceptions import ObjectDoesNotExist
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -127,7 +128,6 @@ def answer_question(
     """
     Answer a question based on the most similar context from the dataframe texts
     """
-    # Retrieve the expert from the session
     expert_id = request.session.get("expert", None)
     expert = Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
     PROMPT = f"Answer the question based on the context below, in the first person as if you are {expert}."
@@ -190,102 +190,144 @@ def answer_question(
 
 
 @login_required
-def home(request):
+def load_expert_from_session(request):
     expert_id = request.session.get("expert", None)
-    print(f"expert_id: {expert_id}")
-    expert = Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
+    try:
+        return Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
+    except ObjectDoesNotExist:
+        return Expert.objects.first()
 
-    experts = Expert.objects.all()
 
-    # Get current last_modified timestamps
+# def load_and_update_embeddings(experts):
+#     # Initialize
+#     current_timestamps = {}
+#     cached_timestamps = cache.get("last_modified_timestamps", {})
+#     embeddings = {}
+
+#     # Loop through each expert in the QuerySet
+#     for expert in experts:
+#         last_modified = Document.objects.filter(expert=expert).aggregate(
+#             Max("last_modified")
+#         )["last_modified__max"]
+#         if last_modified:
+#             current_timestamps[expert.name] = last_modified
+
+#     # Check and reload any changed embeddings
+#     for expert_name, timestamp in current_timestamps.items():
+#         if cached_timestamps.get(expert_name) != timestamp:
+#             # Your existing logic to reload embeddings
+#             new_embeddings = get_embeddings(expert_name=expert_name)
+#             embeddings[expert_name] = new_embeddings[expert_name]
+#             cached_timestamps[expert_name] = timestamp
+#             cache.set(f"embeddings_{expert_name}", new_embeddings[expert_name], None)
+#     # If no embeddings were updated, get all
+#     if not embeddings:
+#         for expert in experts:
+#             sanitized_name = expert.name.replace(" ", "_")
+#             embeddings[expert.name] = cache.get(f"embeddings_{expert.name}")
+
+#     # Update cached timestamps
+#     cache.set("last_modified_timestamps", cached_timestamps, None)
+
+
+#     return embeddings
+def load_and_update_embeddings(experts):
+    # Initialize
     current_timestamps = {}
-    for e in experts:
-        last_modified = Document.objects.filter(expert=e).aggregate(
+    cached_timestamps = cache.get("last_modified_timestamps", {})
+    embeddings = {}
+
+    # Loop through each expert in the QuerySet
+    for expert in experts:
+        last_modified = Document.objects.filter(expert=expert).aggregate(
             Max("last_modified")
         )["last_modified__max"]
-        if last_modified:
-            current_timestamps[e.name] = last_modified
-
-    # Get cached last_modified timestamps
-    cached_timestamps = cache.get("last_modified_timestamps", {})
-
-    # Initialize embeddings dict to store any new embeddings
-    embeddings = {}
+        if last_modified is not None:
+            current_timestamps[expert.name] = last_modified
+        else:
+            # If all documents for an expert are deleted, set the embeddings to None
+            embeddings[expert.name] = None
+            cache.set(f"embeddings_{expert.name}", None, None)
 
     # Check and reload any changed embeddings
     for expert_name, timestamp in current_timestamps.items():
         if cached_timestamps.get(expert_name) != timestamp:
-            sanitized_name = expert_name.replace(
-                " ", "_"
-            )  # sanitize the name for the cache key
-            # Reload embeddings for this expert
+            # Your existing logic to reload embeddings
             new_embeddings = get_embeddings(expert_name=expert_name)
-            print("Available keys in new_embeddings:", new_embeddings.keys())
-
             embeddings[expert_name] = new_embeddings[expert_name]
-
-            # Update the cache
             cached_timestamps[expert_name] = timestamp
-
             cache.set(f"embeddings_{expert_name}", new_embeddings[expert_name], None)
+
+    # If no embeddings were updated, get all
+    if not embeddings:
+        for expert in experts:
+            # sanitized_name = expert.name.replace(" ", "_")
+            embeddings[expert.name] = cache.get(f"embeddings_{expert.name}")
 
     # Update cached timestamps
     cache.set("last_modified_timestamps", cached_timestamps, None)
 
-    # If no embeddings were updated, get all
-    if not embeddings:
-        for e in experts:
-            sanitized_name = e.name.replace(" ", "_")
+    return embeddings
 
-            embeddings[e.name] = cache.get(f"embeddings_{expert_name}")
+
+def handle_post_request(request, form, embeddings, current_expert):
+    question = form.cleaned_data.get("question")
+    df = embeddings[current_expert.name]
+
+    # Return both answer and context
+    answer, context = answer_question(
+        request,
+        df,
+        question=question,
+        debug=False,  # Assuming DEBUG is a constant you've defined
+        conversation_id=request.session.get("conversation_id"),
+    )
+    # Create a new conversation or use an existing one
+    if "conversation_id" not in request.session or (
+        "new_expert" in request.session and request.session["new_expert"]
+    ):
+        user = request.user
+        conversation = Conversation.objects.create(
+            title=question, expert=current_expert, user=user
+        )
+        request.session["conversation_id"] = conversation.id
+
+        if "new_expert" in request.session and request.session["new_expert"]:
+            request.session["new_expert"] = False
+    else:
+        conversation_id = request.session["conversation_id"]
+        conversation = get_object_or_404(Conversation, id=conversation_id)
+
+    # Create and save the message
+    message = Message.objects.create(
+        conversation=conversation,
+        question=question,
+        answer=answer,
+        context=context,
+    )
+
+    message.save()
+
+    return render(
+        request,
+        "answer.html",
+        {"answer": answer, "question": question, "current_expert": current_expert},
+    )
+
+
+@login_required
+def home(request):
+    expert = load_expert_from_session(request)
+    experts = Expert.objects.all()
+    embeddings = load_and_update_embeddings(experts)
 
     if request.htmx and request.method == "POST":
         form = QuestionForm(request.POST)
         if form.is_valid():
-            question = form.cleaned_data.get("question")
-            df = embeddings[expert.name]
-            # Return both answer and context
-            answer, context = answer_question(
-                request,
-                df,
-                question=question,
-                debug=DEBUG,
-                conversation_id=request.session.get("conversation_id"),
-            )
-
-            if "conversation_id" not in request.session or (
-                "new_expert" in request.session and request.session["new_expert"]
-            ):
-                user = request.user
-                print(f"Creating new conversation for expert {expert}")
-                conversation = Conversation.objects.create(
-                    title=question, expert=expert, user=user
-                )
-                request.session["conversation_id"] = conversation.id
-                if "new_expert" in request.session:
-                    if request.session["new_expert"] == True:
-                        request.session["new_expert"] = False
-            else:
-                # This is an existing session, get the current conversation
-                conversation_id = request.session["conversation_id"]
-                conversation = get_object_or_404(Conversation, id=conversation_id)
-
-            message = Message.objects.create(
-                conversation=conversation,
-                question=question,
-                answer=answer,
-                context=context,
-            )
-
-            message.save()
-
-            return render(
-                request,
-                "answer.html",
-                {"answer": answer, "question": question, "current_expert": expert},
-            )
+            return handle_post_request(request, form, embeddings, expert)
     else:
         form = QuestionForm()
+
     return render(
         request,
         "home.html",
