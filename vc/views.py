@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -19,10 +19,9 @@ from django.contrib.auth.decorators import login_required
 from .timer_decorator import timer
 from .mixins import ContextMixin
 from django.core.cache import cache
+from django.db.models import Max
 
 openai.api_key = config("OPENAI_API_KEY")
-
-expert = Expert.objects.first()
 
 
 MODEL = Model.objects.first().name
@@ -32,31 +31,61 @@ MAX_TOKENS = 300
 DEBUG = True
 
 
-def get_embeddings(experts=Expert.objects.all()):
-    embeddings = cache.get("embeddings")
+def get_embeddings(experts=Expert.objects.all(), expert_name=None):
+    if expert_name:
+        experts = Expert.objects.filter(name=expert_name)
+        sanitized_expert_name = expert_name.replace(" ", "_")
 
-    if not embeddings:
-        print("Getting embeddings..")
-        embeddings = {}
-        documents = Document.objects.all()
+    last_modified_in_cache = cache.get("last_modified")
+    latest_doc = Document.objects.latest("last_modified")
 
-        for e in experts:
-            df_temp = pd.DataFrame()
-            embeddings[e.name] = pd.DataFrame()
+    if expert_name:
+        # Load only the embeddings for the specified expert
+        embeddings = cache.get(f"embeddings_{expert_name}")
 
-            for document in documents:
-                if e.name == document.expert.name:
-                    try:
-                        df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
-                        embeddings[e.name] = pd.concat(
-                            [
-                                df_temp,
-                                embeddings[e.name],
-                            ],
-                            ignore_index=True,
-                        )
-                    except:
-                        print("No embeddings for " + document.title)
+        if embeddings is None or (
+            last_modified_in_cache and latest_doc.last_modified > last_modified_in_cache
+        ):
+            print(f"Getting embeddings for {expert_name}..")
+            embeddings = generate_embeddings_for_experts(experts)
+
+            cache.set(f"embeddings_{expert_name}", embeddings, None)
+    else:
+        # Load the embeddings for all experts
+        embeddings = cache.get("embeddings")
+        if embeddings is None or (
+            last_modified_in_cache and latest_doc.last_modified > last_modified_in_cache
+        ):
+            print("Getting embeddings for all experts..")
+            embeddings = generate_embeddings_for_experts(experts)
+            cache.set("embeddings", embeddings, None)
+
+    cache.set("last_modified", latest_doc.last_modified, None)
+    return embeddings
+
+
+def generate_embeddings_for_experts(experts):
+    embeddings = {}
+    documents = Document.objects.all()
+
+    for e in experts:
+        df_temp = pd.DataFrame()
+        embeddings[e.name] = pd.DataFrame()
+
+        for document in documents:
+            if e.name == document.expert.name:
+                try:
+                    df_temp = pd.read_parquet(document.embeddings, engine="pyarrow")
+                    embeddings[e.name] = pd.concat(
+                        [
+                            df_temp,
+                            embeddings[e.name],
+                        ],
+                        ignore_index=True,
+                    )
+                except:
+                    print(f"No embeddings for {document.title}")
+
     return embeddings
 
 
@@ -84,6 +113,7 @@ def create_context(question, df, max_len=1800, size="ada"):
 
 
 def answer_question(
+    request,
     df,
     conversation_id=None,
     model="gpt-3.5-turbo",
@@ -97,6 +127,9 @@ def answer_question(
     """
     Answer a question based on the most similar context from the dataframe texts
     """
+    # Retrieve the expert from the session
+    expert_id = request.session.get("expert", None)
+    expert = Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
     PROMPT = f"Answer the question based on the context below, in the first person as if you are {expert}."
     context = create_context(
         question,
@@ -158,8 +191,53 @@ def answer_question(
 
 @login_required
 def home(request):
+    expert_id = request.session.get("expert", None)
+    print(f"expert_id: {expert_id}")
+    expert = Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
+
     experts = Expert.objects.all()
-    embeddings = get_embeddings(experts)
+
+    # Get current last_modified timestamps
+    current_timestamps = {}
+    for e in experts:
+        last_modified = Document.objects.filter(expert=e).aggregate(
+            Max("last_modified")
+        )["last_modified__max"]
+        if last_modified:
+            current_timestamps[e.name] = last_modified
+
+    # Get cached last_modified timestamps
+    cached_timestamps = cache.get("last_modified_timestamps", {})
+
+    # Initialize embeddings dict to store any new embeddings
+    embeddings = {}
+
+    # Check and reload any changed embeddings
+    for expert_name, timestamp in current_timestamps.items():
+        if cached_timestamps.get(expert_name) != timestamp:
+            sanitized_name = expert_name.replace(
+                " ", "_"
+            )  # sanitize the name for the cache key
+            # Reload embeddings for this expert
+            new_embeddings = get_embeddings(expert_name=expert_name)
+            print("Available keys in new_embeddings:", new_embeddings.keys())
+
+            embeddings[expert_name] = new_embeddings[expert_name]
+
+            # Update the cache
+            cached_timestamps[expert_name] = timestamp
+
+            cache.set(f"embeddings_{expert_name}", new_embeddings[expert_name], None)
+
+    # Update cached timestamps
+    cache.set("last_modified_timestamps", cached_timestamps, None)
+
+    # If no embeddings were updated, get all
+    if not embeddings:
+        for e in experts:
+            sanitized_name = e.name.replace(" ", "_")
+
+            embeddings[e.name] = cache.get(f"embeddings_{expert_name}")
 
     if request.htmx and request.method == "POST":
         form = QuestionForm(request.POST)
@@ -168,17 +246,18 @@ def home(request):
             df = embeddings[expert.name]
             # Return both answer and context
             answer, context = answer_question(
+                request,
                 df,
                 question=question,
                 debug=DEBUG,
                 conversation_id=request.session.get("conversation_id"),
             )
 
-            if (
-                "conversation_id" not in request.session
-                or "new_expert" in request.session
+            if "conversation_id" not in request.session or (
+                "new_expert" in request.session and request.session["new_expert"]
             ):
                 user = request.user
+                print(f"Creating new conversation for expert {expert}")
                 conversation = Conversation.objects.create(
                     title=question, expert=expert, user=user
                 )
@@ -201,26 +280,40 @@ def home(request):
             message.save()
 
             return render(
-                request, "answer.html", {"answer": answer, "question": question}
+                request,
+                "answer.html",
+                {"answer": answer, "question": question, "current_expert": expert},
             )
     else:
         form = QuestionForm()
     return render(
         request,
         "home.html",
-        {"form": form, "experts": experts, "title": "Vajrayana AI Chat"},
+        {
+            "form": form,
+            "experts": experts,
+            "current_expert": expert,
+            "title": "Vajrayana AI Chat",
+        },
     )
 
 
 def change_expert(request):
-    global expert
-
     title = request.GET.get("title", "Thrangu Rinpoche")
-    expert = Expert.objects.get(name=title)
-    # start new conversation if expert changes
+    print(f"title: {title}")
+    new_expert = Expert.objects.get(name=title)
+
+    request.session["expert"] = new_expert.id
+
     request.session["new_expert"] = True
-    print(expert)
-    return render(request, "_title.html", {"title": title})
+
+    print(f"new_expert: {new_expert}")
+    experts = Expert.objects.all()
+    return render(
+        request,
+        "_title.html",
+        {"title": title, "experts": experts, "current_expert": new_expert},
+    )
 
 
 class ExpertListView(LoginRequiredMixin, ContextMixin, ListView):
@@ -332,13 +425,15 @@ class ConversationListView(LoginRequiredMixin, ContextMixin, ListView):
 class ConversationDetailView(LoginRequiredMixin, ContextMixin, DetailView):
     model = Conversation
     template_name = "conversation_detail.html"
-    extra_context = {"title": f"Conversation with {expert}"}
+    # extra_context = {"title": f"Conversation with {self.object.expert}"}
 
     def get_context_data(self, **kwargs):
         context = super(ConversationDetailView, self).get_context_data(**kwargs)
         context["messages"] = Message.objects.filter(conversation=self.object).order_by(
             "id"
         )
+        context["title"] = f"Conversation with {self.object.expert}"
+
         return context
 
 

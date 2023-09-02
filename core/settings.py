@@ -40,6 +40,8 @@ MIDDLEWARE = [
 
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}}
 
+# SESSION_ENGINE = "django.contrib.session.backends.db"
+
 ROOT_URLCONF = "core.urls"
 
 TEMPLATES = [

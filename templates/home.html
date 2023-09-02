@@ -6,13 +6,15 @@ Vajrayana AI Chat
 
 
 {% block content %}
-        <h2 id="title" class="title text-center my-4">Ask Thrangu Rinpoche</h2>
-        <select class="select" name="title" hx-get="{% url 'change_expert' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
-            {% for expert in experts %}
-                <option value="{{ expert }}">{{ expert }}</option>
-            {% endfor %}
-        </select>
-        <label class="form-label select-label">Choose an Expert:</label>
+
+                <h2 id="title" class="title text-center my-4">Ask {{ current_expert }}</h2>
+                <select class="select" name="title" hx-get="{% url 'change_expert' %}" hx-trigger="change" hx-swap="outerHTML" hx-target="#title">
+                    {% for expert in experts %}
+                    <option value="{{ expert }}" {% if expert == current_expert%}selected{% endif%}>{{ expert }}</option>
+                    {% endfor %}
+                </select>
+                <label class="form-label select-label">Choose an Expert:</label>
+
         <br>
             <form method="POST" >
                 {% csrf_token %}   
@@ -34,5 +36,3 @@ Vajrayana AI Chat
                 <img class="img-fluid rounded mb-3" src="{% static '/img/amitabha_painting.jpg' %}" alt="Amitabha Buddha" >
             </div>
 {% endblock %}
-</body>
-</html>
