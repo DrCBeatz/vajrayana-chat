@@ -213,37 +213,34 @@ def load_expert_from_session(request):
 
 
 def load_and_update_embeddings(experts):
-    # Initialize
     current_timestamps = {}
     cached_timestamps = cache.get("last_modified_timestamps", {})
     embeddings = {}
 
-    # Loop through each expert in the QuerySet
     for expert in experts:
         last_modified = Document.objects.filter(expert=expert).aggregate(
             Max("last_modified")
         )["last_modified__max"]
+
         if last_modified is not None:
             current_timestamps[expert.name] = last_modified
-        else:
-            # If all documents for an expert are deleted, set the embeddings to None
-            embeddings[expert.name] = None
-            cache.set(f"embeddings_{expert.name}", None, None)
 
-    # Check and reload any changed embeddings
     for expert_name, timestamp in current_timestamps.items():
         if cached_timestamps.get(expert_name) != timestamp:
             new_embeddings = get_embeddings(expert_name=expert_name)
-            embeddings[expert_name] = new_embeddings[expert_name]
-            cached_timestamps[expert_name] = timestamp
-            cache.set(f"embeddings_{expert_name}", new_embeddings[expert_name], None)
+            if new_embeddings is not None:
+                embeddings[expert_name] = new_embeddings[expert_name]
+                cached_timestamps[expert_name] = timestamp
+                cache.set(
+                    f"embeddings_{expert_name}", new_embeddings[expert_name], None
+                )
 
-    # If no embeddings were updated, get all
     if not embeddings:
         for expert in experts:
-            embeddings[expert.name] = cache.get(f"embeddings_{expert.name}")
+            cached_embedding = cache.get(f"embeddings_{expert.name}")
+            if cached_embedding is not None:
+                embeddings[expert.name] = cached_embedding
 
-    # Update cached timestamps
     cache.set("last_modified_timestamps", cached_timestamps, None)
 
     return embeddings
@@ -251,7 +248,23 @@ def load_and_update_embeddings(experts):
 
 def handle_post_request(request, form, embeddings, current_expert):
     question = form.cleaned_data.get("question")
-    df = embeddings[current_expert.name]
+
+    try:
+        df = embeddings[current_expert.name]
+    except KeyError:
+        df = None
+        print(f"No embeddings found for {current_expert.name}.")
+
+    if df is None or df.empty:
+        return render(
+            request,
+            "answer.html",
+            {
+                "answer": "No documents available for this expert.",
+                "question": "N/A",
+                "current_expert": current_expert,
+            },
+        )
 
     # Return both answer and context
     answer, context = answer_question(
