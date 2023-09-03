@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import (
@@ -35,31 +35,41 @@ DEBUG = True
 def get_embeddings(experts=Expert.objects.all(), expert_name=None):
     if expert_name:
         experts = Expert.objects.filter(name=expert_name)
-        sanitized_expert_name = expert_name.replace(" ", "_")
 
     last_modified_in_cache = cache.get("last_modified")
     latest_doc = Document.objects.latest("last_modified")
 
-    if expert_name:
-        # Load only the embeddings for the specified expert
-        embeddings = cache.get(f"embeddings_{expert_name}")
+    num_documents_in_db = Document.objects.count()
+    num_documents_in_cache = cache.get("num_documents", None)
 
-        if embeddings is None or (
-            last_modified_in_cache and latest_doc.last_modified > last_modified_in_cache
-        ):
-            print(f"Getting embeddings for {expert_name}..")
-            embeddings = generate_embeddings_for_experts(experts)
-
-            cache.set(f"embeddings_{expert_name}", embeddings, None)
+    if num_documents_in_db != num_documents_in_cache:
+        print("Number of documents has changed, regenerating embeddings..")
+        embeddings = generate_embeddings_for_experts(experts)
+        cache.set("embeddings", embeddings, None)
+        cache.set("num_documents", num_documents_in_db, None)
     else:
-        # Load the embeddings for all experts
-        embeddings = cache.get("embeddings")
-        if embeddings is None or (
-            last_modified_in_cache and latest_doc.last_modified > last_modified_in_cache
-        ):
-            print("Getting embeddings for all experts..")
-            embeddings = generate_embeddings_for_experts(experts)
-            cache.set("embeddings", embeddings, None)
+        if expert_name:
+            # Load only the embeddings for the specified expert
+            embeddings = cache.get(f"embeddings_{expert_name}")
+
+            if embeddings is None or (
+                last_modified_in_cache
+                and latest_doc.last_modified > last_modified_in_cache
+            ):
+                print(f"Getting embeddings for {expert_name}..")
+                embeddings = generate_embeddings_for_experts(experts)
+
+                cache.set(f"embeddings_{expert_name}", embeddings, None)
+        else:
+            # Load the embeddings for all experts
+            embeddings = cache.get("embeddings")
+            if embeddings is None or (
+                last_modified_in_cache
+                and latest_doc.last_modified > last_modified_in_cache
+            ):
+                print("Getting embeddings for all experts..")
+                embeddings = generate_embeddings_for_experts(experts)
+                cache.set("embeddings", embeddings, None)
 
     cache.set("last_modified", latest_doc.last_modified, None)
     return embeddings
@@ -84,8 +94,12 @@ def generate_embeddings_for_experts(experts):
                         ],
                         ignore_index=True,
                     )
+                except FileNotFoundError:
+                    print(
+                        f"File not found for document {document.title}, regenerating embeddings for {e.name}"
+                    )
                 except:
-                    print(f"No embeddings for {document.title}")
+                    print(f"Unexpected error occurred for {document.title}")
 
     return embeddings
 
@@ -198,39 +212,6 @@ def load_expert_from_session(request):
         return Expert.objects.first()
 
 
-# def load_and_update_embeddings(experts):
-#     # Initialize
-#     current_timestamps = {}
-#     cached_timestamps = cache.get("last_modified_timestamps", {})
-#     embeddings = {}
-
-#     # Loop through each expert in the QuerySet
-#     for expert in experts:
-#         last_modified = Document.objects.filter(expert=expert).aggregate(
-#             Max("last_modified")
-#         )["last_modified__max"]
-#         if last_modified:
-#             current_timestamps[expert.name] = last_modified
-
-#     # Check and reload any changed embeddings
-#     for expert_name, timestamp in current_timestamps.items():
-#         if cached_timestamps.get(expert_name) != timestamp:
-#             # Your existing logic to reload embeddings
-#             new_embeddings = get_embeddings(expert_name=expert_name)
-#             embeddings[expert_name] = new_embeddings[expert_name]
-#             cached_timestamps[expert_name] = timestamp
-#             cache.set(f"embeddings_{expert_name}", new_embeddings[expert_name], None)
-#     # If no embeddings were updated, get all
-#     if not embeddings:
-#         for expert in experts:
-#             sanitized_name = expert.name.replace(" ", "_")
-#             embeddings[expert.name] = cache.get(f"embeddings_{expert.name}")
-
-#     # Update cached timestamps
-#     cache.set("last_modified_timestamps", cached_timestamps, None)
-
-
-#     return embeddings
 def load_and_update_embeddings(experts):
     # Initialize
     current_timestamps = {}
@@ -252,7 +233,6 @@ def load_and_update_embeddings(experts):
     # Check and reload any changed embeddings
     for expert_name, timestamp in current_timestamps.items():
         if cached_timestamps.get(expert_name) != timestamp:
-            # Your existing logic to reload embeddings
             new_embeddings = get_embeddings(expert_name=expert_name)
             embeddings[expert_name] = new_embeddings[expert_name]
             cached_timestamps[expert_name] = timestamp
@@ -261,7 +241,6 @@ def load_and_update_embeddings(experts):
     # If no embeddings were updated, get all
     if not embeddings:
         for expert in experts:
-            # sanitized_name = expert.name.replace(" ", "_")
             embeddings[expert.name] = cache.get(f"embeddings_{expert.name}")
 
     # Update cached timestamps
@@ -467,7 +446,6 @@ class ConversationListView(LoginRequiredMixin, ContextMixin, ListView):
 class ConversationDetailView(LoginRequiredMixin, ContextMixin, DetailView):
     model = Conversation
     template_name = "conversation_detail.html"
-    # extra_context = {"title": f"Conversation with {self.object.expert}"}
 
     def get_context_data(self, **kwargs):
         context = super(ConversationDetailView, self).get_context_data(**kwargs)
