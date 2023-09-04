@@ -49,6 +49,7 @@ def model_obj(db):
 
 @pytest.fixture
 def expert_obj(db, model_obj):
+    print(type(model_obj))
     return Expert.objects.create(
         name="Expert1", prompt="Prompt1", role="Role1", model=model_obj
     )
@@ -97,6 +98,15 @@ def messages(db, conversations):
             context="Test context 2",
         ),
     ]
+
+
+@pytest.fixture
+def document_obj(db, expert_obj):
+    return Document.objects.create(
+        title="Document1",
+        expert=expert_obj,
+        content="This is a test document",
+    )
 
 
 @pytest.fixture
@@ -361,177 +371,213 @@ def test_conversation_delete_view(client_with_user, expert_obj):
     assert Conversation.objects.count() == 0
 
 
-# def test_document_list_view(client, user, documents):
-#     client.login(username="testuser", password="testpassword")
-#     response = client.get("/documents/")
-#     assert response.status_code == 200
-#     assert len(response.context["documents"]) == 2
-#     assert documents[0] in response.context["documents"]
-#     assert documents[1] in response.context["documents"]
+def test_document_list_view(client_with_user, document_obj):
+    client, user = client_with_user
+    url = reverse("document-list")
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert len(response.context["documents"]) == 1
+    assert document_obj in response.context["documents"]
+    assert "Document1" in str(response.content)
 
 
-# def test_document_detail_view(client, user, documents):
-#     client.login(username="testuser", password="testpassword")
-#     document = documents[0]
-#     response = client.get(f"/documents/{document.pk}/")
-#     assert response.status_code == 200
-#     assert response.context["document"] == document
+def test_document_detail_view(client_with_user, document_obj):
+    client, user = client_with_user
+    url = reverse("document-detail", kwargs={"pk": document_obj.pk})
+    response = client.get(url)
+
+    assert response.status_code == 200
+    assert response.context["document"] == document_obj
+    assert "Document1" in str(response.content)
 
 
-# def test_document_delete_view(client, user, documents):
-#     client.login(username="testuser", password="testpassword")
-#     document = documents[0]
-#     response = client.post(f"/documents/{document.pk}/delete/")
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
+def test_document_delete_view(client_with_user, document_obj):
+    client, user = client_with_user
+    url = reverse("document-delete", kwargs={"pk": document_obj.pk})
+
+    # Make a GET request to confirm page exists
+    response = client.get(url)
+    assert response.status_code == 200
+
+    # Make a POST request to delete the document
+    response = client.post(url)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    # Confim the document is deleted
+    assert Document.objects.filter(pk=document_obj.pk).count() == 0
 
 
-# def test_document_create_view(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Document",
-#             "expert": expert.id,
-#             "embeddings": "embeddings/thrangu_rinpoche_embeddings.parquet",
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Document"
+def test_document_create_view_content(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
+
+    post_data = {
+        "title": "Document1",
+        "expert": expert_obj.id,
+        "content": "This is a test document",
+    }
+
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.title == "Document1"
+    assert document.expert == expert_obj
+    assert document.content == "This is a test document"
 
 
-# def test_document_create_view_content(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Document",
-#             "expert": expert.id,
-#             "content": "Test content",
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Document"
-#     assert Document.objects.first().content == "Test content"
-#     assert Document.objects.first().embeddings != ""
+def test_document_create_view_embeddings(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
+
+    post_data = {
+        "title": "Document1",
+        "expert": expert_obj.id,
+        "embeddings": "embeddings/thrangu_rinpoche_embeddings.parquet",
+    }
+
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.title == "Document1"
+    assert document.expert == expert_obj
+    assert document.embeddings != None
 
 
-# def test_document_create_view_txt_document(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
+def test_document_create_view_txt_document(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
 
-#     doc_content = "this is a test document"
-#     doc_file = SimpleUploadedFile("test_document.txt", doc_content.encode())
+    doc_content = "this is a test document"
+    doc_file = SimpleUploadedFile("test_document.txt", doc_content.encode())
 
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Document",
-#             "expert": expert.id,
-#             "document": doc_file,
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Document"
-#     assert Document.objects.first().content == doc_content
-#     assert Document.objects.first().embeddings != ""
+    post_data = {
+        "title": "Document1",
+        "expert": expert_obj.id,
+        "document": doc_file,
+    }
 
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
 
-# def test_document_create_view_pdf_document(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
-
-#     doc_content = "this is a test pdf document"
-#     pdf_buffer = generate_pdf_content(doc_content)
-
-#     pdf_file = SimpleUploadedFile("test_document.pdf", pdf_buffer.read())
-
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Document",
-#             "expert": expert.id,
-#             "document": pdf_file,
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Document"
-#     assert Document.objects.first().content.replace("\n", "") == doc_content
-#     assert Document.objects.first().embeddings != ""
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.title == "Document1"
+    assert document.expert == expert_obj
+    assert document.content == doc_content
+    assert Document.objects.first().embeddings != ""
 
 
-# def test_document_create_view_html_url(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
+def test_document_create_view_pdf_document(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
 
-#     website_content = """http://info.cern.ch
-# http://info.cern.ch - home of the first website
-# From here you can:
-# Browse the first website
-# Browse the first website using the line-mode browser simulator
-# Learn about the birth of the web
-# Learn about CERN, the physics laboratory where the web was born"""
+    doc_content = "this is a test pdf document"
+    pdf_buffer = generate_pdf_content(doc_content)
 
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Website",
-#             "expert": expert.id,
-#             "html_url": "http://info.cern.ch",
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Website"
-#     assert Document.objects.first().content == website_content
-#     assert Document.objects.first().embeddings != ""
+    pdf_file = SimpleUploadedFile("test_document.pdf", pdf_buffer.read())
 
+    post_data = {
+        "title": "Document1",
+        "expert": expert_obj.id,
+        "document": pdf_file,
+    }
 
-# def test_document_create_view_youtube_url(client, user, experts):
-#     expert = experts[0]
-#     client.login(username="testuser", password="testpassword")
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
 
-#     video_content = """thank you I go thank you very much thank you everyone thank you so much your lovely defending people thank you it's my privilege thank you"""
-
-#     response = client.post(
-#         "/documents/new/",
-#         data={
-#             "title": "Test Youtube Video",
-#             "expert": expert.id,
-#             "youtube_url": "https://www.youtube.com/watch?v=4nOSvpnCFTs",
-#         },
-#     )
-#     assert response.status_code == 302
-#     assert Document.objects.count() == 1
-#     assert Document.objects.first().title == "Test Youtube Video"
-#     assert Document.objects.first().content == video_content
-#     assert Document.objects.first().embeddings != ""
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.title == "Document1"
+    assert document.expert == expert_obj
+    assert Document.objects.first().content.replace("\n", "") == doc_content
+    assert Document.objects.first().embeddings != ""
 
 
-# def test_document_update_view(client, user, experts, documents):
-#     document_to_update = documents[0]
-#     client.login(username="testuser", password="testpassword")
-#     updated_title = "Updated Title"
-#     response = client.post(
-#         f"/documents/{document_to_update.pk}/edit/",
-#         data={
-#             "title": updated_title,
-#             "expert": experts[1].id,
-#             "content": "Updated content",
-#         },
-#     )
-#     assert response.status_code == 302
-#     document_to_update.refresh_from_db()
-#     assert document_to_update.title == updated_title
-#     assert document_to_update.content == "Updated content"
-#     assert document_to_update.expert == experts[1]
-#     assert (
-#         document_to_update.embeddings
-#         != "embeddings/thrangu_rinpoche_embeddings.parquet"
-#     )
+def test_document_create_html_url(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
+    website_content = """http://info.cern.ch
+http://info.cern.ch - home of the first website
+From here you can:
+Browse the first website
+Browse the first website using the line-mode browser simulator
+Learn about the birth of the web
+Learn about CERN, the physics laboratory where the web was born"""
+
+    post_data = {
+        "title": "Test Website",
+        "expert": expert_obj.id,
+        "html_url": "http://info.cern.ch",
+    }
+
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.title == "Test Website"
+    assert document.expert == expert_obj
+    assert document.content == website_content
+    assert Document.objects.first().embeddings != ""
+
+
+def test_document_create_youtube_url(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
+    video_content = """thank you I go thank you very much thank you everyone thank you so much your lovely defending people thank you it's my privilege thank you"""
+
+    post_data = {
+        "title": "Test Youtube Video",
+        "expert": expert_obj.id,
+        "youtube_url": "https://www.youtube.com/watch?v=4nOSvpnCFTs",
+    }
+
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.expert == expert_obj
+    assert Document.objects.first().title == "Test Youtube Video"
+    assert Document.objects.first().content == video_content
+    assert Document.objects.first().embeddings != ""
+
+
+@pytest.mark.django_db
+def test_document_updated_view(client_with_user, document_obj):
+    client, user = client_with_user
+    url = reverse("document-update", kwargs={"pk": document_obj.pk})
+
+    # Test GET request (Retrieving the form)
+    response = client.get(url)
+    assert response.status_code == 200
+
+    # Test POST request (Submitting the form)
+    new_title = "Document1 Updated"
+    response = client.post(
+        url,
+        {
+            "title": new_title,
+            "expert": document_obj.expert.id,
+            "content": document_obj.content,
+        },
+    )
+
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
+
+    document_obj.refresh_from_db()
+    assert document_obj.title == new_title
+    
