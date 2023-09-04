@@ -4,11 +4,14 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.test.client import RequestFactory
+from django.contrib.sessions.middleware import SessionMiddleware
 import openai
+from vc.views import change_expert
 from decouple import config
 from reportlab.pdfgen import canvas
 from io import BytesIO
-from unittest import mock
+from unittest.mock import Mock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
@@ -218,6 +221,63 @@ def test_get_embeddings(experts):
 #     # Test that the response is correct
 #     assert response.status_code == 200
 #     assert "form" in response.context
+
+
+@pytest.mark.django_db
+def test_change_expert_view():
+    # Create a request factory instance
+    factory = RequestFactory()
+
+    # create a model object
+    model = Model.objects.create(
+        name="gpt-3.5-turbo",
+        context_length=4096,
+        input_token_cost=0.0015,
+        output_token_cost=0.002,
+    )
+
+    # Create some experts
+    expert1 = Expert.objects.create(
+        name="Expert1", prompt="Prompt1", role="Role1", model=model
+    )
+    expert2 = Expert.objects.create(
+        name="Expert2", prompt="Prompt2", role="Role2", model=model
+    )
+    expert3 = Expert.objects.create(
+        name="Expert3", prompt="Prompt3", role="Role3", model=model
+    )
+
+    # Simulate a GET request to change the expert
+    for new_expert in [expert1, expert2, expert3]:
+        request = factory.get(reverse("change_expert") + f"?title={new_expert.name}")
+        middleware = SessionMiddleware(Mock())  # Mocking 'get_response'
+        middleware.process_request(request)
+        request.session.save()
+
+        # Assume user has a session with an expert
+        request.session[
+            "expert"
+        ] = (
+            expert1.name
+        )  # Setting the session with the id of the first expert as a starting point
+        request.session[
+            "new_expert"
+        ] = False  # This is set to True when a new expert is selected
+
+        # Call the view
+        response = change_expert(request)
+
+        # Check if the session was updated
+        assert request.session["expert"] == new_expert.id
+
+        # Check if th 'new_expert' flg in the session is now True
+        assert request.session["new_expert"] is True
+
+        # Check if the response contains the new expert's name
+        assert new_expert.name.encode() in response.content
+
+        # Check the status code
+        assert response.status_code == 200
 
 
 def test_expert_list_view(client_with_user, experts):
@@ -580,4 +640,3 @@ def test_document_updated_view(client_with_user, document_obj):
 
     document_obj.refresh_from_db()
     assert document_obj.title == new_title
-    
