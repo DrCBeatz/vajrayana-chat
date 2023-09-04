@@ -21,6 +21,9 @@ from .mixins import ContextMixin
 from django.core.cache import cache
 from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
+import logging
+
+logger = logging.getLogger(__name__)
 
 openai.api_key = config("OPENAI_API_KEY")
 
@@ -342,6 +345,32 @@ def change_expert(request):
     request.session["new_expert"] = True
 
     print(f"new_expert: {new_expert}")
+    experts = Expert.objects.all()
+    return render(
+        request,
+        "_title.html",
+        {"title": title, "experts": experts, "current_expert": new_expert},
+    )
+
+
+def change_expert(request):
+    title = request.GET.get("title", "Thrangu Rinpoche")
+    try:
+        new_expert = Expert.objects.get(name=title)
+    except Expert.DoesNotExist:
+        new_expert = None
+        try:
+            new_expert = Expert.objects.get(id=request.session.get("expert"))
+        except (Expert.DoesNotExist, TypeError):
+            new_expert = Expert.objects.get(
+                name="Thrangu Rinpoche"
+            )  # Fallback to a predefined expert
+            title = "Thrangu Rinpoche"  # Update title to reflect the fallback expert
+        logger.warning(f"Attempt to change to non-existent expert: {title}")
+
+    request.session["expert"] = new_expert.id
+    request.session["new_expert"] = True
+
     experts = Expert.objects.all()
     return render(
         request,

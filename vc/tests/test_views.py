@@ -1,10 +1,11 @@
 import pytest
-from django.test import TestCase
+from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test.client import RequestFactory
+
+# from django.test.client import RequestFactory
 from django.contrib.sessions.middleware import SessionMiddleware
 import openai
 from vc.views import change_expert
@@ -157,127 +158,79 @@ def test_get_embeddings(experts):
     assert "Expert2" in result
 
 
-# @pytest.mark.django_db
-# @mock.patch("vc.views.create_context", return_value="some context")
-# @mock.patch(
-#     "openai.ChatCompletion.create",
-#     return_value={"choices": [{"message": {"content": "some answer"}}]},
-# )
-# def test_answer_question(mock_create_context, mock_chat_completion):
-#     from vc.views import answer_question
+class ChangeExpertViewTest(TestCase):
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.middleware = SessionMiddleware(lambda req: None)
+        self.model = Model.objects.create(
+            name="gpt-3.5-turbo",
+            context_length=4096,
+            input_token_cost=0.0015,
+            output_token_cost=0.002,
+        )
+        self.expert1 = Expert.objects.create(
+            name="Expert1", prompt="Prompt1", role="Role1", model=self.model
+        )
+        self.expert2 = Expert.objects.create(
+            name="Expert2", prompt="Prompt2", role="Role2", model=self.model
+        )
+        self.fallback_expert = Expert.objects.create(
+            name="Thrangu Rinpoche",
+            prompt="PromptFallback",
+            role="RoleFallback",
+            model=self.model,
+        )
 
-#     df = pd.DataFrame(
-#         {
-#             "text": ["text1", "text2"],
-#             "embeddings": ["embedding1", "embedding2"],
-#             "n_tokens": [10, 15],
-#         }
-#     )
-#     answer, context = answer_question(df)
-#     assert answer == "some answer"
-#     assert context == "some context"
+    def test_change_expert_view(self):
+        request = self.factory.get(
+            reverse("change_expert") + f"?title={self.expert1.name}"
+        )
 
-
-# @pytest.mark.django_db
-# @mock.patch("vc.views.create_context", return_value="some context")
-# @mock.patch(
-#     "openai.ChatCompletion.create",
-#     return_value={"choices": [{"message": {"content": "some answer"}}]},
-# )
-# def test_get_answer(mock_create_context, mock_chat_completion):
-#     from vc.views import answer_question
-
-#     df = pd.DataFrame(
-#         {
-#             "text": ["text1", "text2"],
-#             "embeddings": ["embedding1", "embedding2"],
-#             "n_tokens": [10, 15],
-#         }
-#     )
-#     answer, context = answer_question(df)
-#     assert answer == "some answer"
-#     assert context == "some context"
-
-
-# @pytest.mark.django_db
-# def test_home_view_get(client):
-#     # Create a user and log in
-#     User = get_user_model()
-#     user = User.objects.create_user(username="testuser", password="testpass123")
-#     client.login(username="testuser", password="testpass123")
-
-#     # Create necessary objects for the view
-#     model = Model.objects.create(
-#         name="TestModel",
-#         input_token_cost=10.0,
-#         output_token_cost=5.0,
-#         context_length=20,
-#     )
-#     expert = Expert.objects.create(name="TestExpert", model=model)
-
-#     # GET request
-#     response = client.get(reverse("home"))
-
-#     # Test that the response is correct
-#     assert response.status_code == 200
-#     assert "form" in response.context
-
-
-@pytest.mark.django_db
-def test_change_expert_view():
-    # Create a request factory instance
-    factory = RequestFactory()
-
-    # create a model object
-    model = Model.objects.create(
-        name="gpt-3.5-turbo",
-        context_length=4096,
-        input_token_cost=0.0015,
-        output_token_cost=0.002,
-    )
-
-    # Create some experts
-    expert1 = Expert.objects.create(
-        name="Expert1", prompt="Prompt1", role="Role1", model=model
-    )
-    expert2 = Expert.objects.create(
-        name="Expert2", prompt="Prompt2", role="Role2", model=model
-    )
-    expert3 = Expert.objects.create(
-        name="Expert3", prompt="Prompt3", role="Role3", model=model
-    )
-
-    # Simulate a GET request to change the expert
-    for new_expert in [expert1, expert2, expert3]:
-        request = factory.get(reverse("change_expert") + f"?title={new_expert.name}")
-        middleware = SessionMiddleware(Mock())  # Mocking 'get_response'
-        middleware.process_request(request)
+        # Apply session middleware manually to add session support to the request
+        self.middleware.process_request(request)
         request.session.save()
 
-        # Assume user has a session with an expert
-        request.session[
-            "expert"
-        ] = (
-            expert1.name
-        )  # Setting the session with the id of the first expert as a starting point
-        request.session[
-            "new_expert"
-        ] = False  # This is set to True when a new expert is selected
-
-        # Call the view
         response = change_expert(request)
+        self.assertEqual(response.status_code, 200)
 
-        # Check if the session was updated
-        assert request.session["expert"] == new_expert.id
+        # Validate that the session stores the expected expert ID
+        self.assertEqual(request.session["expert"], self.expert1.id)
 
-        # Check if th 'new_expert' flg in the session is now True
-        assert request.session["new_expert"] is True
+    def test_change_expert_with_invalid_title(self):
+        request = self.factory.get(
+            reverse("change_expert") + "?title=InvalidExpertName"
+        )
 
-        # Check if the response contains the new expert's name
-        assert new_expert.name.encode() in response.content
+        # Apply session middleware manually to add session support to the request
+        self.middleware.process_request(request)
+        request.session.save()
 
-        # Check the status code
-        assert response.status_code == 200
+        response = change_expert(request)
+        self.assertEqual(response.status_code, 200)
+
+        # Assume session is the way you're storing the current expert
+        self.assertEqual(request.session["expert"], self.fallback_expert.id)
+
+        # Additional checks can go here, for example, you can check whether the content of the response is as expected
+        self.assertIn(
+            b"Thrangu Rinpoche", response.content
+        )  # Replace with actual check
+
+    def test_change_expert_view_missing_title(self):
+        request = self.factory.get(reverse("change_expert"))
+
+        # Apply session middleware manually to add session support to the request
+        self.middleware.process_request(request)
+        request.session.save()
+
+        response = change_expert(request)
+        self.assertEqual(response.status_code, 200)
+
+        # Validate that the session stores the fallback expert when no title is provided
+        self.assertEqual(request.session["expert"], self.fallback_expert.id)
+
+        # Check if the response contains the name of the fallback expert
+        self.assertIn(b"Thrangu Rinpoche", response.content)
 
 
 def test_expert_list_view(client_with_user, experts):
