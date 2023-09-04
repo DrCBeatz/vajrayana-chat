@@ -4,11 +4,9 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
-
-# from django.test.client import RequestFactory
 from django.contrib.sessions.middleware import SessionMiddleware
 import openai
-from vc.views import change_expert
+from vc.views import change_expert, generate_embeddings_for_experts
 from decouple import config
 from reportlab.pdfgen import canvas
 from io import BytesIO
@@ -16,6 +14,7 @@ from unittest.mock import Mock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
+from django.core.files import File
 
 
 openai.api_key = config("OPENAI_API_KEY")
@@ -129,7 +128,48 @@ def documents(db, user, experts):
     ]
 
 
+@pytest.fixture
+def documents2(db, experts):
+    expert1 = Expert.objects.get(name="Expert1")
+    expert2 = Expert.objects.get(name="Expert2")
+
+    # Create mock documents and save in a format (e.g., Parquet)
+    # that generate_embeddings_for_experts expects.
+    df1 = pd.DataFrame({"text": ["A"], "embedding": [[0.1, 0.2]]})
+    df2 = pd.DataFrame({"text": ["B"], "embedding": [[0.3, 0.4]]})
+
+    # Replace with your own logic for saving DataFrame to a file.
+    df1.to_parquet("doc1.parquet")
+    df2.to_parquet("doc2.parquet")
+
+    Document.objects.create(
+        title="Doc1", expert=expert1, embeddings=File(open("doc1.parquet", "rb"))
+    )
+    Document.objects.create(
+        title="Doc2", expert=expert2, embeddings=File(open("doc2.parquet", "rb"))
+    )
+    return Document.objects.all()
+
+
 # views tests
+
+
+def test_generate_embeddings_for_experts(db, experts, documents2):
+    # Arrange: Setup is done by fixtures
+
+    # Act
+    result = generate_embeddings_for_experts(experts)
+
+    # Assert
+    assert "Expert1" in result
+    assert "Expert2" in result
+    assert isinstance(result["Expert1"], pd.DataFrame)
+    assert isinstance(result["Expert2"], pd.DataFrame)
+    assert result["Expert1"].shape == (1, 2)
+    assert result["Expert2"].shape == (1, 2)
+    assert np.allclose(result["Expert1"].embedding.values[0], [0.1, 0.2])
+    assert np.allclose(result["Expert2"].embedding.values[0], [0.3, 0.4])
+
 
 
 @pytest.mark.django_db
@@ -156,6 +196,24 @@ def test_get_embeddings(experts):
 
     assert "Expert1" in result
     assert "Expert2" in result
+
+
+@pytest.mark.django_db
+def test_home_view_authenticated(client, user, expert_obj, document_obj):
+    client.force_login(user)
+    url = reverse("home")
+    response = client.get(url)
+    assert response.status_code == 200
+    assert b"Vajrayana AI Chat" in response.content
+    assert b"Expert1" in response.content
+
+
+@pytest.mark.django_db
+def test_home_view_unauthenticated(client, user, expert_obj, document_obj):
+    url = reverse("home")
+    response = client.get(url)
+    assert response.status_code == 302  # HTTP status code for redirection
+    assert response.url == "/accounts/login/?next=/"
 
 
 class ChangeExpertViewTest(TestCase):
