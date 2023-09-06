@@ -2,11 +2,16 @@ import pytest
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.sessions.middleware import SessionMiddleware
 import openai
-from vc.views import change_expert, generate_embeddings_for_experts
+from vc.views import (
+    change_expert,
+    generate_embeddings_for_experts,
+    load_expert_from_session,
+)
 from decouple import config
 from reportlab.pdfgen import canvas
 from io import BytesIO
@@ -152,6 +157,77 @@ def documents2(db, experts):
 
 
 # views tests
+@pytest.mark.django_db
+def test_load_expert_from_session(expert_obj, user):
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {"expert": expert_obj.id}
+
+    result = load_expert_from_session(request)
+
+    assert result == expert_obj
+
+
+@pytest.mark.django_db
+def test_load_expert_from_session_no_user(expert_obj):
+    request = RequestFactory().get("/")
+    request.user = AnonymousUser()
+    request.session = {"expert": expert_obj.id}
+    result = load_expert_from_session(request)
+    assert result.status_code == 302
+    assert result.url == "/accounts/login/?next=/"
+
+
+@pytest.mark.django_db
+def test_load_expert_from_session_no_expert(expert_obj, user):
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {}
+
+    result = load_expert_from_session(request)
+    assert result == Expert.objects.first()
+
+
+@pytest.mark.django_db
+def test_load_expert_from_session_invalid_expert_id(expert_obj, user):
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {"expert": "invalid_id"}
+
+    result = load_expert_from_session(request)
+    assert result == Expert.objects.first()
+
+
+@pytest.mark.django_db
+def test_load_expert_from_session_invalid_but_well_formed_expert_id(expert_obj, user):
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {"expert": 999}
+    result = load_expert_from_session(request)
+    assert result == Expert.objects.first()
+
+
+@pytest.mark.django_db
+def test_load_expert_from_session_multiple_experts(experts, user):
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {"expert": experts[1].id}
+    result = load_expert_from_session(request)
+    assert result == experts[1]
+    assert result != experts[0]
+
+@pytest.mark.django_db
+def test_load_expert_from_session_empty_db_and_session(user):
+    """
+    Test to ensure that load_expert_from_session returns None when both 
+    the database and session are empty. i.e.:
+    Expert.objects.first() == None
+    """
+    request = RequestFactory().get("/")
+    request.user = user
+    request.session = {}
+    result = load_expert_from_session(request)
+    assert result == None
 
 
 def test_generate_embeddings_for_experts(db, experts, documents2):
@@ -169,7 +245,6 @@ def test_generate_embeddings_for_experts(db, experts, documents2):
     assert result["Expert2"].shape == (1, 2)
     assert np.allclose(result["Expert1"].embedding.values[0], [0.1, 0.2])
     assert np.allclose(result["Expert2"].embedding.values[0], [0.3, 0.4])
-
 
 
 @pytest.mark.django_db

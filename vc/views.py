@@ -210,8 +210,12 @@ def answer_question(
 def load_expert_from_session(request):
     expert_id = request.session.get("expert", None)
     try:
-        return Expert.objects.get(id=expert_id) if expert_id else Expert.objects.first()
-    except ObjectDoesNotExist:
+        return (
+            Expert.objects.get(id=int(expert_id))
+            if expert_id
+            else Expert.objects.first()
+        )
+    except (ObjectDoesNotExist, ValueError, TypeError):
         return Expert.objects.first()
 
 
