@@ -11,9 +11,10 @@ from vc.views import (
     change_expert,
     generate_embeddings_for_experts,
     load_expert_from_session,
+    load_and_update_embeddings,
 )
 from decouple import config
-from unittest.mock import Mock
+from unittest.mock import patch, MagicMock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
@@ -23,6 +24,50 @@ openai.api_key = config("OPENAI_API_KEY")
 
 
 # views tests
+
+
+@pytest.mark.django_db
+def test_load_and_update_embeddings(experts):
+    expert1, expert2 = experts
+
+    doc1 = Document.objects.create(
+        title="Document1", expert=expert1, content="Content1"
+    )
+    doc2 = Document.objects.create(
+        title="Document2", expert=expert2, content="Content2"
+    )
+
+    with patch("vc.views.get_embeddings") as mock_get_embeddings, patch.object(
+        Document, "embed"
+    ) as mock_embed_method:
+        mock_get_embeddings.return_value = {
+            "Expert1": "Embeddings1",
+            "Expert2": "Embeddings2",
+        }
+        mock_embed_method.return_value = None
+
+        # Updating contentent and saving to trigger embed()
+        doc1.content = "Updated Content"
+        doc1.save()
+
+        cache.clear()
+
+        result = load_and_update_embeddings([expert1, expert2])
+
+        cached_timestamps = cache.get("last_modified_timestamps", {})
+    assert cached_timestamps == {
+        "Expert1": Document.objects.filter(expert=expert1).first().last_modified,
+        "Expert2": Document.objects.filter(expert=expert2).first().last_modified,
+    }
+
+    assert result == {
+        "Expert1": "Embeddings1",
+        "Expert2": "Embeddings2",
+    }
+
+    mock_embed_method.assert_any_call()
+
+
 @pytest.mark.django_db
 def test_load_expert_from_session(expert_obj, user):
     request = RequestFactory().get("/")
