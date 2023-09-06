@@ -4,7 +4,7 @@ import pandas as pd
 import openai
 from django.core.files import File
 import tiktoken
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 from bs4 import BeautifulSoup
 import requests
 from .embed_functions import remove_newlines, split_into_many

@@ -5,84 +5,10 @@ from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
 import openai
 from decouple import config
-from reportlab.pdfgen import canvas
-from io import BytesIO
+# from util import generate_pdf_content
 from unittest import mock
 
 openai.api_key = config("OPENAI_API_KEY")
-
-
-def generate_pdf_content(content="this is a test pdf document"):
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=(100, 100))
-    c.drawString(10, 10, content)
-    c.showPage()
-    c.save()
-    buffer.seek(0)
-    return buffer
-
-
-@pytest.fixture
-def user(db):
-    User = get_user_model()
-    return User.objects.create_user("testuser", "test@example.com", "testpassword")
-
-
-@pytest.fixture
-def experts(db):
-    model = Model.objects.create(name="gpt-3.5-turbo")
-
-    return [
-        Expert.objects.create(name="Expert1", model=model),
-        Expert.objects.create(name="Expert2", model=model),
-    ]
-
-
-@pytest.fixture
-def conversations(db, user, experts):
-    return [
-        Conversation.objects.create(
-            title="test conversation 1", user=user, expert=experts[0]
-        ),
-        Conversation.objects.create(
-            title="test conversation 2", user=user, expert=experts[0]
-        ),
-    ]
-
-
-@pytest.fixture
-def messages(db, conversations):
-    conversation = conversations[0]
-    return [
-        Message.objects.create(
-            conversation=conversation,
-            question="Test question 1",
-            answer="Test answer 1",
-            context="Test context 1",
-        ),
-        Message.objects.create(
-            conversation=conversation,
-            question="Test question 2",
-            answer="Test answer 2",
-            context="Test context 2",
-        ),
-    ]
-
-
-@pytest.fixture
-def documents(db, user, experts):
-    return [
-        Document.objects.create(
-            expert=experts[0],
-            title="Test document 1",
-            embeddings="embeddings/thrangu_rinpoche_embeddings.parquet",
-        ),
-        Document.objects.create(
-            expert=experts[1],
-            title="Test document 2",
-            embeddings="embeddings/mingyur_rinpoche_embeddings.parquet",
-        ),
-    ]
 
 
 # Model tests
