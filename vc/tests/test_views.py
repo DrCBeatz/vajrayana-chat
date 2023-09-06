@@ -68,58 +68,17 @@ def test_load_and_update_embeddings(experts):
     mock_embed_method.assert_any_call()
 
 
-# def mock_cache_get_function(key, default=None):
-
-#     return {
-#         "last_modified_timestamps": {"Expert1": "OldTimestamp", "Expert2": "OldTimestamp"},
-#         "embeddings_Expert1": "OldEmbeddings1",
-#         "embeddings_Expert2": "OldEmbeddings2",
-#     }.get(key, default)
-
-# @pytest.mark.django_db
-# def test_load_and_update_embeddings_uses_cache(experts):
-#     expert1, expert2 = experts
-
-#     # Setup
-#     Document.objects.create(title="Document1", expert=expert1, content="Content1")
-#     Document.objects.create(title="Document2", expert=expert2, content="Content2")
-
-#     with patch("vc.views.get_embeddings") as mock_get_embeddings, patch.object(
-#         Document, "embed"
-#     ) as mock_embed_method, patch(
-#         "django.core.cache.cache.get"
-#     ) as mock_cache_get, patch(
-#         "django.core.cache.cache.set"
-#     ) as mock_cache_set:
-#         # Mock the cache to return pre-existing timestamps and embeddings
-
-#         mock_cache_get.side_effect = lambda key: {
-#             "last_modified_timestamps": {
-#                 "Expert1": "OldTimestamp",
-#                 "Expert2": "OldTimestamp",
-#             },
-#             "embeddings_Expert1": "OldEmbeddings1",
-#             "embeddings_Expert2": "OldEmbeddings2",
-#         }.get(key)
-
-#         result = load_and_update_embeddings([expert1, expert2])
-
-#         # Assertions
-#         mock_cache_get.assert_any_call("last_modified_timestamps")
-#         mock_cache_get.assert_called()
-#         assert result == {
-#             "Expert1": "OldEmbeddings1",  # Should use cached embeddings
-#             "Expert2": "OldEmbeddings2",  # Should use cached embeddings
-#         }
-
-
 @pytest.mark.django_db
 def test_load_and_update_embeddings_uses_cache(experts):
     def mock_cache_get_function(key, default=None):
         return {
             "last_modified_timestamps": {
-                "Expert1": Document.objects.filter(expert=expert1).first().last_modified,
-                "Expert2": Document.objects.filter(expert=expert2).first().last_modified,
+                "Expert1": Document.objects.filter(expert=expert1)
+                .first()
+                .last_modified,
+                "Expert2": Document.objects.filter(expert=expert2)
+                .first()
+                .last_modified,
             },
             "embeddings_Expert1": "OldEmbeddings1",
             "embeddings_Expert2": "OldEmbeddings2",
@@ -149,7 +108,7 @@ def test_load_and_update_embeddings_uses_cache(experts):
 
         # Assertions
         # mock_cache_get.assert_any_call("last_modified_timestamps")
-        # mock_cache_get.assert_called()
+
         mock_cache_set.assert_called()  # Add more details to this assertion as per your use-case
         assert result == {
             "Expert1": "OldEmbeddings1",  # Should use cached embeddings
