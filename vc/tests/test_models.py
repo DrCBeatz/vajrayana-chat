@@ -1,14 +1,43 @@
 import pytest
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from vc.models import Model, Expert, Conversation, Message, Document
+from vc.models import Model, Expert, Conversation, Message, Document, clean_text
 from django.core.files.uploadedfile import SimpleUploadedFile
 import openai
 from decouple import config
+
 # from util import generate_pdf_content
 from unittest import mock
 
 openai.api_key = config("OPENAI_API_KEY")
+
+
+def test_clean_text_removes_trailing_whitespace():
+    assert clean_text("  This has trailing space  ") == "This has trailing space"
+
+
+def test_clean_text_removes_leading_whitespace():
+    assert clean_text("   This has leading space") == "This has leading space"
+
+
+def test_clean_text_replaces_multiple_newlines():
+    assert clean_text("Line 1\n\n\nLine 2") == "Line 1\nLine 2"
+
+
+def test_clean_text_removes_empty_lines():
+    assert clean_text("Line 1\n\n\n   \nLine 2") == "Line 1\nLine 2"
+
+
+def test_clean_text_with_mixed_whitespace():
+    assert clean_text("  Line 1  \n\n  Line 2  ") == "Line 1\nLine 2"
+
+
+def test_clean_text_returns_empty_string():
+    assert clean_text("    \n\n  ") == ""
+
+
+def test_clean_text_returns_same_for_clean_input():
+    assert clean_text("Already clean") == "Already clean"
 
 
 # Model tests

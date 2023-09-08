@@ -24,6 +24,7 @@ pytest-django = "*"
 reportlab = "*"
 mock = "*"
 pypdf = {extras = ["crypto"], version = "*"}
+coverage = "*"
 
 [dev-packages]
 
