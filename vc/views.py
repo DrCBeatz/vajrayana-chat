@@ -107,7 +107,7 @@ def generate_embeddings_for_experts(experts):
     return embeddings
 
 
-def create_context(question, df, max_len=1800, size="ada"):
+def create_context(question, df, max_len=1800, size="ada", distance_threshold=0.8):
     # Check if DataFrame is empty
     if df.empty or df["embeddings"].isna().all() or df["text"].isna().all():
         return ""
@@ -124,7 +124,10 @@ def create_context(question, df, max_len=1800, size="ada"):
     cur_len = 0
 
     for _, row in df.sort_values("distances", ascending=True).iterrows():
-        cur_len += row["n_tokens"] + 4
+        if row["distances"] > distance_threshold:
+            continue  # Skip this row, as it's not a close enough match
+
+        cur_len += row["n_tokens"] + 4  # Adding 4 for the separators
 
         if cur_len > max_len:
             break

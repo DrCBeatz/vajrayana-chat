@@ -100,6 +100,39 @@ def test_create_context_empty_dataframe(
     assert result == ""
 
 
+def test_create_context_no_match(
+    mock_openai_embedding_create, mock_distances_from_embeddings
+):
+    # Arrange
+    question = "What is the capital of France?"
+    df = pd.DataFrame(
+        {
+            "embeddings": ["embedding_1", "embedding_2"],
+            "text": ["Answer to another question", "Yet another unrelated answer"],
+            "n_tokens": [5, 6],
+            "distances": [0.9, 0.95],  # High distances indicating poor match
+        }
+    )
+    max_len = 50
+
+    mock_openai_embedding_create.return_value = {
+        "data": [{"embedding": "question_embedding"}]
+    }
+    mock_distances_from_embeddings.return_value = df["distances"].values
+
+    # Act
+    result = create_context(question, df, max_len=max_len, size="ada")
+
+    # Assert
+    mock_openai_embedding_create.assert_called()
+
+    called_args, called_kwargs = mock_distances_from_embeddings.call_args
+    assert called_args[0] == "question_embedding"
+    assert np.array_equal(called_args[1], df["embeddings"].values)
+    assert called_kwargs["distance_metric"] == "cosine"
+    assert result == ""
+
+
 @pytest.mark.django_db
 def test_load_and_update_embeddings(experts):
     expert1, expert2 = experts
