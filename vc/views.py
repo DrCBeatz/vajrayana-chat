@@ -249,7 +249,6 @@ def load_and_update_embeddings(experts):
                 embeddings[expert.name] = cached_embedding
 
     cache.set("last_modified_timestamps", cached_timestamps, None)
-
     return embeddings
 
 
@@ -262,7 +261,11 @@ def handle_post_request(request, form, embeddings, current_expert):
         df = None
         print(f"No embeddings found for {current_expert.name}.")
 
-    if df is None or df.empty:
+    if (
+        df is None
+        or (isinstance(df, pd.DataFrame) and df.empty)
+        or (isinstance(df, dict) and not df)
+    ):
         return render(
             request,
             "answer.html",

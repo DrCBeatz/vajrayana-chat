@@ -3,8 +3,10 @@ from django.contrib.auth import get_user_model
 from django.core.files import File
 from vc.models import Model, Expert, Conversation, Message, Document
 import pandas as pd
+import numpy as np
 from io import BytesIO
 from reportlab.pdfgen import canvas
+from unittest import mock
 
 
 def generate_pdf_content(content="this is a test pdf document"):
@@ -133,3 +135,17 @@ def documents2(db, experts):
         title="Doc2", expert=expert2, embeddings=File(open("doc2.parquet", "rb"))
     )
     return Document.objects.all()
+
+
+@pytest.fixture
+def mock_openai_embedding_create():
+    with mock.patch("vc.views.openai.Embedding.create") as mock_create:
+        mock_create.return_value = {"data": [{"embedding": [0.1, 0.2]}]}
+        yield mock_create
+
+
+@pytest.fixture
+def mock_distances_from_embeddings():
+    with mock.patch("vc.views.distances_from_embeddings") as mock_distances:
+        mock_distances.return_value = np.array([0.1, 0.2, 0.3])
+        yield mock_distances

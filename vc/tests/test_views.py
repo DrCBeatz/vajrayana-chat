@@ -7,14 +7,17 @@ from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.sessions.middleware import SessionMiddleware
 import openai
+from openai.embeddings_utils import distances_from_embeddings
 from vc.views import (
     change_expert,
     generate_embeddings_for_experts,
     load_expert_from_session,
     load_and_update_embeddings,
+    create_context,
 )
 from decouple import config
-from unittest.mock import patch, Mock
+from unittest.mock import patch
+from unittest import mock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
@@ -24,6 +27,31 @@ openai.api_key = config("OPENAI_API_KEY")
 
 
 # views tests
+
+
+def test_create_context(mock_openai_embedding_create, mock_distances_from_embeddings):
+    # Arrange
+    question = "Who is Thrangu Rinpoche?"
+    df = pd.DataFrame(
+        {
+            "embeddings": [
+                np.array([0.1, 0.2]),
+                np.array([0.2, 0.3]),
+                np.array([0.3, 0.4]),
+            ],
+            "text": ["Text 1", "Text 2", "Text 3"],
+            "n_tokens": [5, 5, 5],
+        }
+    )
+    max_len = 10
+
+    # Act
+    result = create_context(question, df, max_len=max_len, size="ada")
+
+    # Assert
+    assert mock_openai_embedding_create.called
+    assert mock_distances_from_embeddings.called
+    assert result == "Text 1"
 
 
 @pytest.mark.django_db
@@ -69,7 +97,7 @@ def test_load_and_update_embeddings(experts):
 
 
 @pytest.mark.django_db
-def test_load_and_update_embeddings_uses_cache(experts):
+def test_load_and_update_embeddings_with_cache(experts):
     def mock_cache_get_function(key, default=None):
         return {
             "last_modified_timestamps": {
