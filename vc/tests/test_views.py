@@ -54,6 +54,30 @@ def test_create_context(mock_openai_embedding_create, mock_distances_from_embedd
     assert result == "Text 1"
 
 
+def test_create_context_api_error(
+    mock_openai_embedding_create, mock_distances_from_embeddings
+):
+    # Arrange
+    mock_openai_embedding_create.side_effect = Exception("API error")
+    question = "Who is Thrangu Rinpoche?"
+    df = pd.DataFrame(
+        {
+            "embeddings": [
+                np.array([0.1, 0.2]),
+                np.array([0.2, 0.3]),
+                np.array([0.3, 0.4]),
+            ],
+            "text": ["Text 1", "Text 2", "Text 3"],
+            "n_tokens": [5, 5, 5],
+        }
+    )
+    max_len = 10
+
+    # Act & Assert
+    with pytest.raises(Exception, match="API error"):
+        create_context(question, df, max_len=max_len, size="ada")
+
+
 @pytest.mark.django_db
 def test_load_and_update_embeddings(experts):
     expert1, expert2 = experts
@@ -119,10 +143,8 @@ def test_load_and_update_embeddings_with_cache(experts):
 
     with patch("vc.views.get_embeddings") as mock_get_embeddings, patch.object(
         Document, "embed"
-    ) as mock_embed_method, patch(
-        "django.core.cache.cache.get"
-    ) as mock_cache_get, patch(
-        "django.core.cache.cache.set"
+    ) as mock_embed_method, patch("vc.views.cache.get") as mock_cache_get, patch(
+        "vc.views.cache.set"
     ) as mock_cache_set:
         mock_get_embeddings.return_value = {
             "Expert1": "Embeddings1",
@@ -137,7 +159,7 @@ def test_load_and_update_embeddings_with_cache(experts):
         # Assertions
         # mock_cache_get.assert_any_call("last_modified_timestamps")
 
-        mock_cache_set.assert_called()  # Add more details to this assertion as per your use-case
+        mock_cache_set.assert_called()
         assert result == {
             "Expert1": "OldEmbeddings1",  # Should use cached embeddings
             "Expert2": "OldEmbeddings2",  # Should use cached embeddings
