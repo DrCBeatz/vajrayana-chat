@@ -78,6 +78,28 @@ def test_create_context_api_error(
         create_context(question, df, max_len=max_len, size="ada")
 
 
+def test_create_context_empty_dataframe(
+    mock_openai_embedding_create, mock_distances_from_embeddings
+):
+    # Arrange
+    question = "Who is Thrangu Rinpoche?"
+    df = pd.DataFrame(
+        {
+            "embeddings": pd.Series(dtype=object),
+            "text": pd.Series(dtype=object),
+            "n_tokens": pd.Series(dtype=int),
+        }
+    )
+    max_len = 10
+
+    # Act
+    result = create_context(question, df, max_len=max_len, size="ada")
+
+    # Assert
+    assert not mock_openai_embedding_create.called
+    assert result == ""
+
+
 @pytest.mark.django_db
 def test_load_and_update_embeddings(experts):
     expert1, expert2 = experts

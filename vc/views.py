@@ -108,6 +108,10 @@ def generate_embeddings_for_experts(experts):
 
 
 def create_context(question, df, max_len=1800, size="ada"):
+    # Check if DataFrame is empty
+    if df.empty or df["embeddings"].isna().all() or df["text"].isna().all():
+        return ""
+
     q_embeddings = openai.Embedding.create(
         input=question, engine="text-embedding-ada-002"
     )["data"][0]["embedding"]
