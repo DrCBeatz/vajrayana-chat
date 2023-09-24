@@ -14,9 +14,10 @@ from vc.views import (
     load_expert_from_session,
     load_and_update_embeddings,
     create_context,
+    answer_question,
 )
 from decouple import config
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 from unittest import mock
 import pandas as pd
 import numpy as np
@@ -26,7 +27,50 @@ from conftest import generate_pdf_content
 openai.api_key = config("OPENAI_API_KEY")
 
 
+@pytest.fixture
+def mock_openai_api():
+    return Mock()
+
+
+@pytest.fixture
+def mock_request():
+    return Mock()
+
+
+@pytest.fixture
+def df():
+    data = {
+        "embeddings": [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],
+        "text": ["Text 1", "Text 2", "Text 3"],
+        "n_tokens": [5, 7, 9],
+    }
+    df = pd.DataFrame(data)
+    return df
+
+
 # views tests
+
+
+def test_answer_question(
+    mock_openai_api, mock_request, df, mock_distances_from_embeddings
+):
+    # Arrange
+    mock_expert = Mock(spec=Expert)
+
+    with patch("vc.models.Expert.objects.get", return_value=mock_expert), patch(
+        "vc.models.Expert.objects.first", return_value=mock_expert
+    ):
+        mock_openai_api.ChatCompletion.create.return_value = {}
+
+        # Act
+        answer, context = answer_question(
+            request=mock_request,
+            df=df,
+            openai_api=mock_openai_api,
+        )
+
+        assert True
+        mock_openai_api.ChatCompletion.create.assert_called_once()
 
 
 def test_create_context(mock_openai_embedding_create, mock_distances_from_embeddings):

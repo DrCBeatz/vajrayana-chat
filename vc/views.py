@@ -140,6 +140,7 @@ def create_context(question, df, max_len=1800, size="ada", distance_threshold=0.
 def answer_question(
     request,
     df,
+    openai_api=openai,
     conversation_id=None,
     model="gpt-3.5-turbo",
     question=f"Who is Thrangu Rinpoche?",
@@ -191,7 +192,7 @@ def answer_question(
         if debug:
             print(f"\n***\n{prompt}\n***\n")
 
-        response = openai.ChatCompletion.create(
+        response = openai_api.ChatCompletion.create(
             messages=[
                 {
                     "role": "system",
@@ -210,7 +211,7 @@ def answer_question(
         return answer, context
     except Exception as e:
         print(e)
-        return ""
+        return "", ""
 
 
 @login_required
