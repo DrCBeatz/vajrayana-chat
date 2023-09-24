@@ -56,11 +56,25 @@ def test_answer_question(
 ):
     # Arrange
     mock_expert = Mock(spec=Expert)
+    expected_answer = "Test Answer"
+    expected_context = """Text 1
 
+###
+
+Text 2
+
+###
+
+Text 3"""
+
+    # Setup the mock for Expert.objects.get and Expert.objects.first
     with patch("vc.models.Expert.objects.get", return_value=mock_expert), patch(
         "vc.models.Expert.objects.first", return_value=mock_expert
     ):
-        mock_openai_api.ChatCompletion.create.return_value = {}
+        # Setup the mock for ChatCompletion.create to return a valid response
+        mock_openai_api.ChatCompletion.create.return_value = {
+            "choices": [{"message": {"content": expected_answer}}]
+        }
 
         # Act
         answer, context = answer_question(
@@ -69,7 +83,9 @@ def test_answer_question(
             openai_api=mock_openai_api,
         )
 
-        assert True
+        # Assert
+        assert answer == expected_answer
+        assert context == expected_context
         mock_openai_api.ChatCompletion.create.assert_called_once()
 
 
