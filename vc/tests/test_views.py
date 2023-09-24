@@ -89,6 +89,31 @@ Text 3"""
         mock_openai_api.ChatCompletion.create.assert_called_once()
 
 
+def test_answer_question_handles_exception(
+    mock_openai_api, mock_request, df, mock_distances_from_embeddings
+):
+    # Arrange
+    mock_expert = Mock(spec=Expert)
+
+    # Setup the mock for Expert.objects.get and Expert.objects.first
+    with patch("vc.models.Expert.objects.get", return_value=mock_expert), patch(
+        "vc.models.Expert.objects.first", return_value=mock_expert
+    ):
+        # Make the API call raise an exception
+        mock_openai_api.ChatCompletion.create.side_effect = Exception("API Error")
+
+        # Act
+        answer, context = answer_question(
+            request=mock_request,
+            df=df,
+            openai_api=mock_openai_api,
+        )
+
+        # Assert
+        assert answer == ""
+        assert context == ""
+
+
 def test_create_context(mock_openai_embedding_create, mock_distances_from_embeddings):
     # Arrange
     question = "Who is Thrangu Rinpoche?"
