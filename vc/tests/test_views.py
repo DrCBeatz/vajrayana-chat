@@ -18,34 +18,12 @@ from vc.views import (
 )
 from decouple import config
 from unittest.mock import patch, Mock
-from unittest import mock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
 from conftest import generate_pdf_content
 
 openai.api_key = config("OPENAI_API_KEY")
-
-
-@pytest.fixture
-def mock_openai_api():
-    return Mock()
-
-
-@pytest.fixture
-def mock_request():
-    return Mock()
-
-
-@pytest.fixture
-def df():
-    data = {
-        "embeddings": [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],
-        "text": ["Text 1", "Text 2", "Text 3"],
-        "n_tokens": [5, 7, 9],
-    }
-    df = pd.DataFrame(data)
-    return df
 
 
 # views tests

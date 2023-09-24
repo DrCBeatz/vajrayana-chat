@@ -1,3 +1,5 @@
+# conftest.py
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.files import File
@@ -7,6 +9,7 @@ import numpy as np
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from unittest import mock
+from unittest.mock import Mock
 
 
 def generate_pdf_content(content="this is a test pdf document"):
@@ -17,6 +20,27 @@ def generate_pdf_content(content="this is a test pdf document"):
     c.save()
     buffer.seek(0)
     return buffer
+
+
+@pytest.fixture
+def mock_openai_api():
+    return Mock()
+
+
+@pytest.fixture
+def mock_request():
+    return Mock()
+
+
+@pytest.fixture
+def df():
+    data = {
+        "embeddings": [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],
+        "text": ["Text 1", "Text 2", "Text 3"],
+        "n_tokens": [5, 7, 9],
+    }
+    df = pd.DataFrame(data)
+    return df
 
 
 @pytest.fixture
