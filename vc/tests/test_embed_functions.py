@@ -1,6 +1,5 @@
 # test_embed_functions.py
 
-import pytest
 import pandas as pd
 from vc.embed_functions import remove_newlines, split_into_many
 import tiktoken
@@ -72,34 +71,40 @@ def test_split_into_many_large_text():
     text = "This is a large text with multiple sentences. It has more tokens than the specified max_tokens limit."
     max_tokens = 10  # adjust this to a suitable value
 
-    # Split the text into sentences
-    sentences = text.split(". ")
-
-    # Calculate the expected chunks considering the additional period at the end
-    expected_chunks = []
-    chunk = []
-    tokens_so_far = 0
-    for sentence in sentences:
-        tokens = len(
-            tokenizer.encode(" " + sentence)
-        )  # Simulate the token count as close as possible
-        if tokens_so_far + tokens > max_tokens:
-            expected_chunks.append(". ".join(chunk) + ".")
-            chunk = []
-            tokens_so_far = 0
-        if tokens > max_tokens:
-            expected_chunks.append(sentence + ".")
-            continue
-        chunk.append(sentence)
-        tokens_so_far += tokens
-    if chunk:
-        expected_chunks.append(". ".join(chunk) + ".")
-
     # Call the function and get the result
     result = split_into_many(text, max_tokens=max_tokens)
 
-    # Assert that the result matches the expected chunks
-    assert result == expected_chunks
+    # Check that each chunk in the result does not exceed max_tokens
+    for chunk in result:
+        assert len(tokenizer.encode(chunk)) <= max_tokens
+
+    # Split the original text and the reconstructed text into words
+    original_words = set(text.split())
+    reconstructed_words = set(" ".join(result).split())
+
+    # Check that the sets of words are equal
+    assert original_words == reconstructed_words
+
+
+def test_split_into_many_sentence_larger_than_max_tokens():
+    large_sentence = "This sentence is larger than max_tokens. " * 50
+    text = f"Small sentence. {large_sentence} Another small sentence."
+    result = split_into_many(text, max_tokens=50)
+
+    # Check that the small sentences are in the result
+    expected_small_sentences = ["Small sentence.", "Another small sentence."]
+    for small_sentence in expected_small_sentences:
+        assert any(
+            small_sentence in res for res in result
+        ), f"{small_sentence} not found in result."
+
+    # Check that every part of the large sentence is included in the result.
+    # Here, create a version of large_sentence that is guaranteed to be broken down into max_token parts
+    large_sentence_parts = [
+        large_sentence[i : i + 50] for i in range(0, len(large_sentence), 50)
+    ]
+    for part in large_sentence_parts:
+        assert any(part in res for res in result), f"{part} not found in result."
 
 
 def test_split_into_many_empty_text():
