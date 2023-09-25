@@ -1,3 +1,4 @@
+# embed_functions.py
 import tiktoken
 
 tokenizer = tiktoken.get_encoding("cl100k_base")
@@ -33,8 +34,9 @@ def split_into_many(text, max_tokens=500):
             tokens_so_far = 0
 
         # If the number of tokens in the current sentence is greater than the max number of
-        # tokens, go to the next sentence
+        # tokens, add the sentence as its own chunk and go to the next sentence
         if token > max_tokens:
+            chunks.append(sentence + ".")
             continue
 
         # Otherwise, add the sentence to the chunk and add the number of tokens to the total
