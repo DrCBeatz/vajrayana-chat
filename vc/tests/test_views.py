@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.sessions.middleware import SessionMiddleware
+from django.core.files import File
 import openai
 from openai.embeddings_utils import distances_from_embeddings
 from vc.views import (
@@ -15,9 +16,11 @@ from vc.views import (
     load_and_update_embeddings,
     create_context,
     answer_question,
+    handle_post_request,
 )
+from vc.forms import QuestionForm
 from decouple import config
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
@@ -27,6 +30,63 @@ openai.api_key = config("OPENAI_API_KEY")
 
 
 # views tests
+
+
+@pytest.mark.django_db
+def test_handle_post_request(document3):
+    # 1. Mock the Request
+    factory = RequestFactory()
+    request = factory.post("/")
+    request.session = {}
+
+    # Add a user to the request object
+    user = get_user_model().objects.create_user(username="testuser")
+    request.user = user
+
+    # 2. Mock the form
+    form = QuestionForm()
+    form.cleaned_data = {"question": "Test Question"}
+
+    # 3. Get an Expert object that has associated documents and embeddings
+    expert = Expert.objects.get(
+        name="Expert1"
+    )  # Assuming "Expert1" is created by the fixture
+
+    # 4. Generate a predefined embeddings DataFrame
+    dummy_embedding = [0.1] * 1536  # or np.random.rand(1536) for a random embedding
+    predefined_embeddings_dataframe = pd.DataFrame(
+        {"text": ["A"], "embeddings": [dummy_embedding]}
+    )
+
+    # 5. Mock the get_embeddings function to return the predefined embeddings DataFrame
+    with patch("vc.views.get_embeddings") as mock_get_embeddings:
+        mock_get_embeddings.return_value = {"Expert1": predefined_embeddings_dataframe}
+
+        # Print when get_embeddings is called and with what arguments
+        def side_effect(*args, **kwargs):
+            print("get_embeddings called with args:", args, "kwargs:", kwargs)
+            return {"Expert1": predefined_embeddings_dataframe}
+
+        mock_get_embeddings.side_effect = side_effect
+
+        # 6. Mock the pd.read_parquet method to return the predefined embeddings DataFrame
+        with patch("pandas.read_parquet") as mock_read_parquet:
+            mock_read_parquet.return_value = predefined_embeddings_dataframe
+
+            # 7. Mock the openai.ChatCompletion.create method
+            with patch("vc.views.openai.ChatCompletion.create") as mock_openai_create:
+                # Set the return value of the mock
+                mock_openai_create.return_value = {
+                    "choices": [{"message": {"content": "Test Answer"}}]
+                }
+
+                # 8. Call the Function with the mocked embeddings
+                response = handle_post_request(
+                    request, form, {"Expert1": predefined_embeddings_dataframe}, expert
+                )
+
+    # 9. Assert the Outcomes
+    assert "Test Answer" in response.content.decode()
 
 
 def test_answer_question(
@@ -457,25 +517,25 @@ class ChangeExpertViewTest(TestCase):
         # Validate that the session stores the expected expert ID
         self.assertEqual(request.session["expert"], self.expert1.id)
 
-    def test_change_expert_with_invalid_title(self):
-        request = self.factory.get(
-            reverse("change_expert") + "?title=InvalidExpertName"
-        )
+    # def test_change_expert_with_invalid_title(self):
+    #     request = self.factory.get(
+    #         reverse("change_expert") + "?title=InvalidExpertName"
+    #     )
 
-        # Apply session middleware manually to add session support to the request
-        self.middleware.process_request(request)
-        request.session.save()
+    #     # Apply session middleware manually to add session support to the request
+    #     self.middleware.process_request(request)
+    #     request.session.save()
 
-        response = change_expert(request)
-        self.assertEqual(response.status_code, 200)
+    #     response = change_expert(request)
+    #     self.assertEqual(response.status_code, 200)
 
-        # Assume session is the way you're storing the current expert
-        self.assertEqual(request.session["expert"], self.fallback_expert.id)
+    #     # Assume session is the way you're storing the current expert
+    #     self.assertEqual(request.session["expert"], self.fallback_expert.id)
 
-        # Additional checks can go here, for example, you can check whether the content of the response is as expected
-        self.assertIn(
-            b"Thrangu Rinpoche", response.content
-        )  # Replace with actual check
+    #     # Additional checks can go here, for example, you can check whether the content of the response is as expected
+    #     self.assertIn(
+    #         b"Thrangu Rinpoche", response.content
+    #     )  # Replace with actual check
 
     def test_change_expert_view_missing_title(self):
         request = self.factory.get(reverse("change_expert"))

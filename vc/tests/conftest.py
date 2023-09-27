@@ -162,6 +162,29 @@ def documents2(db, experts):
 
 
 @pytest.fixture
+def document3(db):
+    # Create an instance of Model
+    model_instance = Model.objects.create(
+        name="Test Model",
+        context_length=4096,
+        input_token_cost=0.0015,
+        output_token_cost=0.002,
+    )
+
+    # Create an instance of Expert and associate it with the Model instance
+    expert1 = Expert.objects.create(name="Expert1", model=model_instance)
+
+    # Create mock documents with embeddings and associate them with the expert
+    df1 = pd.DataFrame({"text": ["A"], "embedding": [[0.1, 0.2]]})
+    df1.to_parquet("doc1.parquet")
+
+    with open("doc1.parquet", "rb") as f:
+        Document.objects.create(title="Doc1", expert=expert1, embeddings=File(f))
+
+    return Document.objects.all()
+
+
+@pytest.fixture
 def mock_openai_embedding_create():
     with mock.patch("vc.views.openai.Embedding.create") as mock_create:
         mock_create.return_value = {"data": [{"embedding": [0.1, 0.2]}]}

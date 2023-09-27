@@ -368,30 +368,30 @@ def change_expert(request):
     )
 
 
-def change_expert(request):
-    title = request.GET.get("title", "Thrangu Rinpoche")
-    try:
-        new_expert = Expert.objects.get(name=title)
-    except Expert.DoesNotExist:
-        new_expert = None
-        try:
-            new_expert = Expert.objects.get(id=request.session.get("expert"))
-        except (Expert.DoesNotExist, TypeError):
-            new_expert = Expert.objects.get(
-                name="Thrangu Rinpoche"
-            )  # Fallback to a predefined expert
-            title = "Thrangu Rinpoche"  # Update title to reflect the fallback expert
-        logger.warning(f"Attempt to change to non-existent expert: {title}")
+# def change_expert(request):
+#     title = request.GET.get("title", "Thrangu Rinpoche")
+#     try:
+#         new_expert = Expert.objects.get(name=title)
+#     except Expert.DoesNotExist:
+#         new_expert = None
+#         try:
+#             new_expert = Expert.objects.get(id=request.session.get("expert"))
+#         except (Expert.DoesNotExist, TypeError):
+#             new_expert = Expert.objects.get(
+#                 name="Thrangu Rinpoche"
+#             )  # Fallback to a predefined expert
+#             title = "Thrangu Rinpoche"  # Update title to reflect the fallback expert
+#         logger.warning(f"Attempt to change to non-existent expert: {title}")
 
-    request.session["expert"] = new_expert.id
-    request.session["new_expert"] = True
+#     request.session["expert"] = new_expert.id
+#     request.session["new_expert"] = True
 
-    experts = Expert.objects.all()
-    return render(
-        request,
-        "_title.html",
-        {"title": title, "experts": experts, "current_expert": new_expert},
-    )
+#     experts = Expert.objects.all()
+#     return render(
+#         request,
+#         "_title.html",
+#         {"title": title, "experts": experts, "current_expert": new_expert},
+#     )
 
 
 class ExpertListView(LoginRequiredMixin, ContextMixin, ListView):
