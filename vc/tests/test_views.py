@@ -6,7 +6,6 @@ from django.contrib.auth.models import AnonymousUser
 from vc.models import Model, Expert, Conversation, Message, Document
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.core.files import File
 import openai
 from openai.embeddings_utils import distances_from_embeddings
 from vc.views import (
@@ -20,7 +19,7 @@ from vc.views import (
 )
 from vc.forms import QuestionForm
 from decouple import config
-from unittest.mock import patch, Mock, MagicMock
+from unittest.mock import patch, Mock
 import pandas as pd
 import numpy as np
 from django.core.cache import cache
@@ -48,9 +47,7 @@ def test_handle_post_request(document3):
     form.cleaned_data = {"question": "Test Question"}
 
     # 3. Get an Expert object that has associated documents and embeddings
-    expert = Expert.objects.get(
-        name="Expert1"
-    )  # Assuming "Expert1" is created by the fixture
+    expert = Expert.objects.get(name="Expert1")
 
     # 4. Generate a predefined embeddings DataFrame
     dummy_embedding = [0.1] * 1536  # or np.random.rand(1536) for a random embedding
@@ -62,9 +59,7 @@ def test_handle_post_request(document3):
     with patch("vc.views.get_embeddings") as mock_get_embeddings:
         mock_get_embeddings.return_value = {"Expert1": predefined_embeddings_dataframe}
 
-        # Print when get_embeddings is called and with what arguments
         def side_effect(*args, **kwargs):
-            print("get_embeddings called with args:", args, "kwargs:", kwargs)
             return {"Expert1": predefined_embeddings_dataframe}
 
         mock_get_embeddings.side_effect = side_effect
