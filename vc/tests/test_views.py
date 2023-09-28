@@ -512,25 +512,25 @@ class ChangeExpertViewTest(TestCase):
         # Validate that the session stores the expected expert ID
         self.assertEqual(request.session["expert"], self.expert1.id)
 
-    # def test_change_expert_with_invalid_title(self):
-    #     request = self.factory.get(
-    #         reverse("change_expert") + "?title=InvalidExpertName"
-    #     )
+    def test_change_expert_with_invalid_title(self):
+        request = self.factory.get(
+            reverse("change_expert") + "?title=InvalidExpertName"
+        )
 
-    #     # Apply session middleware manually to add session support to the request
-    #     self.middleware.process_request(request)
-    #     request.session.save()
+        # Apply session middleware manually to add session support to the request
+        self.middleware.process_request(request)
+        request.session.save()
 
-    #     response = change_expert(request)
-    #     self.assertEqual(response.status_code, 200)
+        response = change_expert(request)
+        self.assertEqual(response.status_code, 200)
 
-    #     # Assume session is the way you're storing the current expert
-    #     self.assertEqual(request.session["expert"], self.fallback_expert.id)
+        # Assume session is the way you're storing the current expert
+        self.assertEqual(request.session["expert"], self.fallback_expert.id)
 
-    #     # Additional checks can go here, for example, you can check whether the content of the response is as expected
-    #     self.assertIn(
-    #         b"Thrangu Rinpoche", response.content
-    #     )  # Replace with actual check
+        # Additional checks can go here, for example, you can check whether the content of the response is as expected
+        self.assertIn(
+            b"Thrangu Rinpoche", response.content
+        )  # Replace with actual check
 
     def test_change_expert_view_missing_title(self):
         request = self.factory.get(reverse("change_expert"))

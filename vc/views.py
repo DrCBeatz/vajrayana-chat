@@ -108,8 +108,13 @@ def generate_embeddings_for_experts(experts):
 
 
 def create_context(question, df, max_len=1800, size="ada", distance_threshold=0.8):
-    # Check if DataFrame is empty
-    if df.empty or df["embeddings"].isna().all() or df["text"].isna().all():
+    # Check if df is not a dataframe or if DataFrame is empty
+    if (
+        not isinstance(df, pd.DataFrame)
+        or df.empty
+        or df["embeddings"].isna().all()
+        or df["text"].isna().all()
+    ):
         return ""
 
     q_embeddings = openai.Embedding.create(
@@ -265,6 +270,10 @@ def handle_post_request(request, form, embeddings, current_expert):
 
     try:
         df = embeddings[current_expert.name]
+        if not isinstance(df, pd.DataFrame):
+            print(
+                f"Unexpected type for embeddings: {type(df)}, expert: {current_expert.name}"
+            )
     except KeyError:
         df = None
         print(f"No embeddings found for {current_expert.name}.")
@@ -352,46 +361,28 @@ def home(request):
 
 def change_expert(request):
     title = request.GET.get("title", "Thrangu Rinpoche")
-    print(f"title: {title}")
-    new_expert = Expert.objects.get(name=title)
+    try:
+        new_expert = Expert.objects.get(name=title)
+    except Expert.DoesNotExist:
+        new_expert = None
+        try:
+            new_expert = Expert.objects.get(id=request.session.get("expert"))
+        except (Expert.DoesNotExist, TypeError):
+            new_expert = Expert.objects.get(
+                name="Thrangu Rinpoche"
+            )  # Fallback to a predefined expert
+            title = "Thrangu Rinpoche"  # Update title to reflect the fallback expert
+        logger.warning(f"Attempt to change to non-existent expert: {title}")
 
     request.session["expert"] = new_expert.id
-
     request.session["new_expert"] = True
 
-    print(f"new_expert: {new_expert}")
     experts = Expert.objects.all()
     return render(
         request,
         "_title.html",
         {"title": title, "experts": experts, "current_expert": new_expert},
     )
-
-
-# def change_expert(request):
-#     title = request.GET.get("title", "Thrangu Rinpoche")
-#     try:
-#         new_expert = Expert.objects.get(name=title)
-#     except Expert.DoesNotExist:
-#         new_expert = None
-#         try:
-#             new_expert = Expert.objects.get(id=request.session.get("expert"))
-#         except (Expert.DoesNotExist, TypeError):
-#             new_expert = Expert.objects.get(
-#                 name="Thrangu Rinpoche"
-#             )  # Fallback to a predefined expert
-#             title = "Thrangu Rinpoche"  # Update title to reflect the fallback expert
-#         logger.warning(f"Attempt to change to non-existent expert: {title}")
-
-#     request.session["expert"] = new_expert.id
-#     request.session["new_expert"] = True
-
-#     experts = Expert.objects.all()
-#     return render(
-#         request,
-#         "_title.html",
-#         {"title": title, "experts": experts, "current_expert": new_expert},
-#     )
 
 
 class ExpertListView(LoginRequiredMixin, ContextMixin, ListView):
