@@ -474,79 +474,53 @@ def test_home_view_unauthenticated(client, user, expert_obj, document_obj):
     assert response.url == "/accounts/login/?next=/"
 
 
-class ChangeExpertViewTest(TestCase):
-    def setUp(self):
-        self.factory = RequestFactory()
-        self.middleware = SessionMiddleware(lambda req: None)
-        self.model = Model.objects.create(
-            name="gpt-3.5-turbo",
-            context_length=4096,
-            input_token_cost=0.0015,
-            output_token_cost=0.002,
-        )
-        self.expert1 = Expert.objects.create(
-            name="Expert1", prompt="Prompt1", role="Role1", model=self.model
-        )
-        self.expert2 = Expert.objects.create(
-            name="Expert2", prompt="Prompt2", role="Role2", model=self.model
-        )
-        self.fallback_expert = Expert.objects.create(
-            name="Thrangu Rinpoche",
-            prompt="PromptFallback",
-            role="RoleFallback",
-            model=self.model,
-        )
+@pytest.fixture
+def change_expert_setup_data(db):
+    model = Model.objects.create(
+        name="gpt-3.5-turbo",
+        context_length=4096,
+        input_token_cost=0.0015,
+        output_token_cost=0.002,
+    )
+    expert1 = Expert.objects.create(
+        name="Expert1", prompt="Prompt1", role="Role1", model=model
+    )
+    expert2 = Expert.objects.create(
+        name="Expert2", prompt="Prompt2", role="Role2", model=model
+    )
+    fallback_expert = Expert.objects.create(
+        name="Thrangu Rinpoche",
+        prompt="PromptFallback",
+        role="RoleFallback",
+        model=model,
+    )
+    return expert1, expert2, fallback_expert
 
-    def test_change_expert_view(self):
-        request = self.factory.get(
-            reverse("change_expert") + f"?title={self.expert1.name}"
-        )
 
-        # Apply session middleware manually to add session support to the request
-        self.middleware.process_request(request)
-        request.session.save()
+def test_change_expert_view(client, change_expert_setup_data):
+    expert1, _, fallback_expert = change_expert_setup_data
 
-        response = change_expert(request)
-        self.assertEqual(response.status_code, 200)
+    response = client.get(reverse("change_expert"), {"title": expert1.name})
+    assert response.status_code == 200
+    assert response.wsgi_request.session["expert"] == expert1.id
 
-        # Validate that the session stores the expected expert ID
-        self.assertEqual(request.session["expert"], self.expert1.id)
 
-    def test_change_expert_with_invalid_title(self):
-        request = self.factory.get(
-            reverse("change_expert") + "?title=InvalidExpertName"
-        )
+def test_change_expert_with_invalid_title(client, change_expert_setup_data):
+    _, _, fallback_expert = change_expert_setup_data
 
-        # Apply session middleware manually to add session support to the request
-        self.middleware.process_request(request)
-        request.session.save()
+    response = client.get(reverse("change_expert"), {"title": "InvalidExpertName"})
+    assert response.status_code == 200
+    assert response.wsgi_request.session["expert"] == fallback_expert.id
+    assert b"Thrangu Rinpoche" in response.content
 
-        response = change_expert(request)
-        self.assertEqual(response.status_code, 200)
 
-        # Assume session is the way you're storing the current expert
-        self.assertEqual(request.session["expert"], self.fallback_expert.id)
+def test_change_expert_view_missing_title(client, change_expert_setup_data):
+    _, _, fallback_expert = change_expert_setup_data
 
-        # Additional checks can go here, for example, you can check whether the content of the response is as expected
-        self.assertIn(
-            b"Thrangu Rinpoche", response.content
-        )  # Replace with actual check
-
-    def test_change_expert_view_missing_title(self):
-        request = self.factory.get(reverse("change_expert"))
-
-        # Apply session middleware manually to add session support to the request
-        self.middleware.process_request(request)
-        request.session.save()
-
-        response = change_expert(request)
-        self.assertEqual(response.status_code, 200)
-
-        # Validate that the session stores the fallback expert when no title is provided
-        self.assertEqual(request.session["expert"], self.fallback_expert.id)
-
-        # Check if the response contains the name of the fallback expert
-        self.assertIn(b"Thrangu Rinpoche", response.content)
+    response = client.get(reverse("change_expert"))
+    assert response.status_code == 200
+    assert response.wsgi_request.session["expert"] == fallback_expert.id
+    assert b"Thrangu Rinpoche" in response.content
 
 
 def test_expert_list_view(client_with_user, experts):

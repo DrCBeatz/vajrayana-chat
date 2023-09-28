@@ -6,7 +6,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 import openai
 from decouple import config
 
-# from util import generate_pdf_content
 from unittest import mock
 
 openai.api_key = config("OPENAI_API_KEY")
@@ -94,41 +93,59 @@ def test_model_str_method():
 
     assert str(model_instance) == "Test Model"
 
+
 @pytest.mark.django_db
 def test_expert_str_method():
     model_instance = Model.objects.create(name="Test Model")
     expert_instance = Expert.objects.create(name="Test Expert", model=model_instance)
-    
+
     assert str(expert_instance) == "Test Expert"
+
 
 @pytest.mark.django_db
 def test_conversation_str_method():
     model_instance = Model.objects.create(name="Test Model")
     expert_instance = Expert.objects.create(name="Test Expert", model=model_instance)
     user = get_user_model()
-    user_instance = user.objects.create(username="TestUser")  # Adjust as necessary to create a CustomUser instance
-    conversation_instance = Conversation.objects.create(title="Test Conversation", expert=expert_instance, user=user_instance)
-    
+    user_instance = user.objects.create(
+        username="TestUser"
+    )  # Adjust as necessary to create a CustomUser instance
+    conversation_instance = Conversation.objects.create(
+        title="Test Conversation", expert=expert_instance, user=user_instance
+    )
+
     assert str(conversation_instance) == "Test Conversation"
+
 
 @pytest.mark.django_db
 def test_message_str_method():
     model_instance = Model.objects.create(name="Test Model")
     expert_instance = Expert.objects.create(name="Test Expert", model=model_instance)
     user = get_user_model()
-    user_instance = user.objects.create(username="TestUser")  # Adjust as necessary to create a CustomUser instance
-    conversation_instance = Conversation.objects.create(title="Test Conversation", expert=expert_instance, user=user_instance)
-    message_instance = Message.objects.create(conversation=conversation_instance, question="Test Question", answer="Test Answer", context="Test Context")
-    
+    user_instance = user.objects.create(username="TestUser")
+    conversation_instance = Conversation.objects.create(
+        title="Test Conversation", expert=expert_instance, user=user_instance
+    )
+    message_instance = Message.objects.create(
+        conversation=conversation_instance,
+        question="Test Question",
+        answer="Test Answer",
+        context="Test Context",
+    )
+
     assert str(message_instance) == "Test Question"
+
 
 @pytest.mark.django_db
 def test_document_str_method():
     model_instance = Model.objects.create(name="Test Model")
     expert_instance = Expert.objects.create(name="Test Expert", model=model_instance)
-    document_instance = Document.objects.create(title="Test Document", expert=expert_instance)
-    
+    document_instance = Document.objects.create(
+        title="Test Document", expert=expert_instance
+    )
+
     assert str(document_instance) == "Test Document"
+
 
 @pytest.mark.django_db
 def test_create_conversation():

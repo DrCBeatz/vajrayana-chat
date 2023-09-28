@@ -1,6 +1,5 @@
 import time
-from vc.timer_decorator import timer  # adjust the import as needed
-import pytest
+from vc.timer_decorator import timer
 from io import StringIO
 import sys
 
