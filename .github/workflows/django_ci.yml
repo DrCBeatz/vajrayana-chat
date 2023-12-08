@@ -27,6 +27,10 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Apply migrations
+        run: |
+          python manage.py migrate
+
       - name: Run Tests
         env:
           SECRET_KEY: ${{ secrets.SECRET_KEY }}
