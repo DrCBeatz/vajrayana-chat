@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 openai.api_key = config("OPENAI_API_KEY")
 
 
-MODEL = Model.objects.first().name
+MODEL = "gpt-3.5-turbo"
 MAX_LEN = 1800
 MAX_TOKENS = 300
 
