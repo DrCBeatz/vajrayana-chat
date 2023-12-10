@@ -1,35 +1,40 @@
-{% load static %}
-{% load crispy_forms_tags %}
+{% load static %} {% load crispy_forms_tags %}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" >
-    <meta http-equiv="x-ua-compatible" content="ie=edge" >
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
 
     <title>Log In</title>
-    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}">
-    <link rel="stylesheet" href="{% static 'css/vc-home.css' %}">
+    <link rel="stylesheet" href="{% static 'css/mdb.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/vc_home.css' %}" />
     <script defer src="{% static 'js/mdb.min.js' %}"></script>
-</head>
-<body class="container" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  </head>
+  <body class="container fade" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <header class="my-4 text-center">
-        <h1 class="title text-danger">Vajrayana Chat Log In</h1>
-        <hr>
+      <h1 class="title text-danger">Vajrayana Chat Log In</h1>
+      <hr />
     </header>
-    
+
     <main>
-        <br>
-        <form method="POST" >
-            {% csrf_token %} 
-            {{ form|crispy }}
-            <div class="py-3">
-                <button type="submit" class="btn btn-danger btn-block">Log In</button>
-            </div>
-        </form>
-        <div class="text-center">
-            <img class="img-fluid rounded my-2" src="{% static 'img/om_mani_padme_hum_v2.jpg' %}" alt="Om Mani Padme Hum"  >
+      <br />
+      <form method="POST">
+        {% csrf_token %} {{ form|crispy }}
+        <div class="py-3">
+          <button type="submit" class="btn btn-danger btn-block">Log In</button>
         </div>
+      </form>
+      <div class="text-center">
+        <img
+          class="img-fluid rounded my-2"
+          src="{% static 'img/om_mani_padme_hum_v2.jpg' %}"
+          alt="Om Mani Padme Hum"
+        />
+      </div>
     </main>
-</body>
+  </body>
 </html>
