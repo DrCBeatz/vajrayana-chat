@@ -37,6 +37,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "csp.middleware.CSPMiddleware",
     "django_htmx.middleware.HtmxMiddleware",
 ]
 
@@ -111,3 +112,59 @@ STATIC_ROOT = os.path.join(BASE_DIR, "collected_static")
 
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# django-csp headers:
+
+CSP_STYLE_SRC = (
+    "'self'",
+    "use.fontawesome.com",
+    "'unsafe-inline'",
+    )
+
+CSP_SCRIPT_SRC = ("'self'",
+     )
+
+CSP_IMG_SRC = ("'self'",
+    "data:",
+    "blob:",
+    )
+
+CSP_FONT_SRC = ("'self'",
+    "data:",
+    )
+
+CSP_CONNECT_SRC = ("'self'",)
+CSP_OBJECT_SRC = ("'none'", )
+CSP_BASE_URI = ("'self'", )
+CSP_FRAME_ANCESTORS = ("'self'" )
+CSP_FORM_ACTION = (
+    "'self'",
+    )
+CSP_INCLUDE_NONCE_IN = ('script-src', 'style-src' )
+CSP_MANIFEST_SRC = ("'self'", )
+CSP_WORKER_SRC = ("'self'", )
+CSP_MEDIA_SRC = ("'self'", )
+CSP_CONNECT_SRC = ("'self'",)
+CSP_DEFAULT_SRC = ("'none'",)
+
+
+# Security settings for production:
+
+SECURE_SSL_REDIRECT = config("SECURE_SSL_REDIRECT", default=True, cast=bool)
+SESSION_COOKIE_SECURE = config("SESSION_COOKIE_SECURE", default=True, cast=bool)
+CSRF_COOKIE_SECURE = config("CSRF_COOKIE_SECURE", default=True, cast=bool)
+
+SECURE_BROWSER_XSS_FILTER = config("SECURE_BROWSER_XSS_FILTER", default=True, cast=bool)
+SECURE_CONTENT_TYPE_NOSNIFF = config(
+    "SECURE_CONTENT_TYPE_NOSNIFF", default=True, cast=bool
+)
+
+SECURE_HSTS_SECONDS = config("SECURE_HSTS_SECONDS", default=15768000, cast=int)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = config(
+    "SECURE_HSTS_INCLUDE_SUBDOMAINS", default=True, cast=bool
+)
+SECURE_HSTS_PRELOAD = config("SECURE_HSTS_PRELOAD", default=True, cast=bool)
+
+SECURE_REFERRER_POLICY = config(
+    "SECURE_REFERRER_POLICY", default="no-referrer-when-downgrade"
+)

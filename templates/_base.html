@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script defer src="{% static 'js/mdb.min.js' %}"></script>
     <script defer src="{% static 'js/htmx.min.js' %}"></script>
+    <script defer src="{% static 'js/_base.js' %}"></script>
 </head>
 <body class="fade" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     
@@ -63,30 +64,7 @@
     </div>
 
     {% block extra_js %}
-    <script>
-        
-        document.addEventListener('htmx:afterRequest', function(evt) {
-            changeSelectedExpert();
-        });
-        
-        function changeSelectedExpert() {
-            const currentExpert = document.querySelector('#title').textContent.substring(4);
-            const selectElement = document.querySelector('.select');
-            const options = selectElement.options;
-        
-            // Loop through all the options and set defaultSelected
-            for (let i = 0; i < options.length; i++) {
-                if (options[i].value === currentExpert) {
-                    options[i].defaultSelected = true;
-                    options[i].selected = true;
-                } else {
-                    options[i].defaultSelected = false;
-                }
-            }
 
-        }
-        
-     </script>
     {% endblock %}
     </body>
     </html>

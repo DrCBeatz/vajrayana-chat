@@ -6,7 +6,7 @@ name = "pypi"
 [packages]
 bs4 = "*"
 pandas = "*"
-openai = "*"
+openai = "==0.28.1"
 tiktoken = "*"
 python-decouple = "*"
 matplotlib = "*"
@@ -25,6 +25,7 @@ reportlab = "*"
 mock = "*"
 pypdf = {extras = ["crypto"], version = "*"}
 coverage = "*"
+django-csp = "*"
 
 [dev-packages]
 
