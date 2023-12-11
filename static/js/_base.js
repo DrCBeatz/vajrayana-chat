@@ -1,4 +1,8 @@
-document.addEventListener('htmx:afterRequest', function(evt) {
+if (window.htmx) {
+    htmx.config.includeIndicatorStyles = false;
+}
+
+document.addEventListener('htmx:afterRequest', function (evt) {
     changeSelectedExpert();
 });
 
