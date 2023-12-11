@@ -132,6 +132,7 @@ CSP_IMG_SRC = (
 
 CSP_FONT_SRC = (
     "'self'",
+    "cdnjs.cloudflare.com",
     "data:",
 )
 
