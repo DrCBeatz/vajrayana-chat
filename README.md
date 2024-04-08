@@ -14,7 +14,7 @@ You can also create your own Experts, add Documents (in the form of text/PDF fil
 
 ### Vajrayana AI Chat receives an A+ Security Rating on Mozilla Observatory (higher than 99% of websites):
 
-![Vajrayana AI Chat Mozilla Observatory Score](static/img/vajrayana_chat_security_rating.png)
+![Vajrayana AI Chat Mozilla Observatory Score](static/img/vajrayana_chat_security_rating2.png)
 
 ---
 
