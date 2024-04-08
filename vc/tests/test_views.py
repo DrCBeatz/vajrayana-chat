@@ -835,27 +835,27 @@ Learn about CERN, the physics laboratory where the web was born"""
     assert Document.objects.first().embeddings != ""
 
 
-# def test_document_create_youtube_url(client_with_user, expert_obj):
-#     client, user = client_with_user
-#     url = reverse("document-create")
-#     video_content = """thank you I go thank you very much thank you everyone thank you so much your lovely defending people thank you it's my privilege thank you"""
+def test_document_create_youtube_url(client_with_user, expert_obj):
+    client, user = client_with_user
+    url = reverse("document-create")
+    video_content = """[Music] [Applause] thank you I'm very grateful for everybody thank you thank thank you very much thank [Music] you thank you thank you very much thank you everyone of you very much thank you so much you're lovely Discerning people thank you it's my privilege thank [Music] you"""
 
-#     post_data = {
-#         "title": "Test Youtube Video",
-#         "expert": expert_obj.id,
-#         "youtube_url": "https://www.youtube.com/watch?v=4nOSvpnCFTs",
-#     }
+    post_data = {
+        "title": "Test Youtube Video",
+        "expert": expert_obj.id,
+        "youtube_url": "https://www.youtube.com/watch?v=4nOSvpnCFTs",
+    }
 
-#     response = client.post(url, data=post_data)
-#     assert response.status_code == 302
-#     assert response.url == reverse("document-list")
+    response = client.post(url, data=post_data)
+    assert response.status_code == 302
+    assert response.url == reverse("document-list")
 
-#     assert Document.objects.count() == 1
-#     document = Document.objects.first()
-#     assert document.expert == expert_obj
-#     assert Document.objects.first().title == "Test Youtube Video"
-#     assert Document.objects.first().content == video_content
-#     assert Document.objects.first().embeddings != ""
+    assert Document.objects.count() == 1
+    document = Document.objects.first()
+    assert document.expert == expert_obj
+    assert Document.objects.first().title == "Test Youtube Video"
+    assert Document.objects.first().content == video_content
+    assert Document.objects.first().embeddings != ""
 
 
 @pytest.mark.django_db
